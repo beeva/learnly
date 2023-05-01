@@ -1,0 +1,30 @@
+{
+  "name": "learnly",
+  "private": true,
+  "type": "module",
+  "description": "Learnly — adaptive learning that adapts to every student.",
+  "packageManager": "pnpm@9.6.0",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "format": "prettier --write .",
+    "db:up": "docker compose up -d postgres",
+    "db:migrate": "pnpm --filter @learnly/api db:migrate",
+    "db:seed": "pnpm --filter @learnly/api db:seed"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.8.0",
+    "@types/node": "^20.14.12",
+    "eslint": "^9.8.0",
+    "prettier": "^3.3.3",
+    "turbo": "^2.0.11",
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.0.0"
+  }
+}
