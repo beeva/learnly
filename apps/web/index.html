@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Learnly — Learning that adapts to every student</title>
+    <meta
+      name="description"
+      content="Learnly finds where each student is, paces lessons to them and turns practice into visible, earned progress."
+    />
+    <meta name="theme-color" content="#5B5BD6" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#14131F" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nunito:wght@600;700;800;900&display=swap"
+    />
+    <script>
+      // Apply the saved theme before first paint so dark-mode users never see a white flash.
+      (function () {
+        try {
+          var theme = localStorage.getItem("learnly.theme");
+          if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
+        } catch (_) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <noscript>Learnly needs JavaScript to run. Please enable it and reload the page.</noscript>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
