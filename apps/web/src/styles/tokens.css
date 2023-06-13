@@ -1,0 +1,295 @@
+/*
+ * Learnly design tokens.
+ * Raw palette values live in --palette-*; components only ever read the semantic
+ * tokens below so light, dark and high-contrast themes can swap them wholesale.
+ */
+:root {
+  /* Brand palette */
+  --palette-indigo-50: #f1f1fd;
+  --palette-indigo-100: #e3e3fb;
+  --palette-indigo-200: #c8c8f5;
+  --palette-indigo-300: #a3a3ee;
+  --palette-indigo-400: #7c7ce4;
+  --palette-indigo-500: #5b5bd6;
+  --palette-indigo-600: #4747bd;
+  --palette-indigo-700: #3a3a9a;
+  --palette-indigo-800: #2c2c72;
+  --palette-indigo-900: #1f1f4f;
+
+  --palette-coral-100: #ffe7df;
+  --palette-coral-300: #ffb39f;
+  --palette-coral-500: #ff7a59;
+  --palette-coral-600: #ec5f3c;
+  --palette-coral-700: #c2452a;
+
+  --palette-mint-100: #dcf5ea;
+  --palette-mint-300: #8fdcb9;
+  --palette-mint-500: #2fb67c;
+  --palette-mint-600: #23966a;
+  --palette-mint-700: #1a7552;
+
+  --palette-amber-100: #fdf0d5;
+  --palette-amber-300: #f9cd78;
+  --palette-amber-500: #f5a524;
+  --palette-amber-700: #a56a0a;
+
+  --palette-ink-900: #1c1b29;
+  --palette-ink-800: #2a2938;
+  --palette-ink-700: #3d3c4f;
+  --palette-ink-600: #55546a;
+  --palette-ink-500: #6f6e85;
+  --palette-ink-400: #9796aa;
+  --palette-ink-300: #c2c1cf;
+  --palette-ink-200: #e2e1e8;
+  --palette-ink-100: #efeef2;
+
+  --palette-paper: #fbfaf7;
+  --palette-white: #ffffff;
+
+  /* Semantic colours — light theme */
+  --color-bg: var(--palette-paper);
+  --color-bg-sunken: #f4f2ec;
+  --color-surface: var(--palette-white);
+  --color-surface-raised: var(--palette-white);
+  --color-surface-hover: #f7f6f2;
+  --color-border: var(--palette-ink-200);
+  --color-border-strong: var(--palette-ink-300);
+  --color-text: var(--palette-ink-900);
+  --color-text-muted: var(--palette-ink-600);
+  --color-text-subtle: var(--palette-ink-500);
+  --color-text-inverse: var(--palette-paper);
+
+  --color-primary: var(--palette-indigo-500);
+  --color-primary-hover: var(--palette-indigo-600);
+  --color-primary-active: var(--palette-indigo-700);
+  --color-primary-soft: var(--palette-indigo-50);
+  --color-primary-soft-strong: var(--palette-indigo-100);
+  --color-primary-text: var(--palette-indigo-600);
+  --color-on-primary: #ffffff;
+
+  --color-accent: var(--palette-coral-500);
+  --color-accent-hover: var(--palette-coral-600);
+  --color-accent-soft: var(--palette-coral-100);
+  --color-accent-text: var(--palette-coral-700);
+
+  --color-success: var(--palette-mint-500);
+  --color-success-soft: var(--palette-mint-100);
+  --color-success-text: var(--palette-mint-700);
+  --color-warning: var(--palette-amber-500);
+  --color-warning-soft: var(--palette-amber-100);
+  --color-warning-text: var(--palette-amber-700);
+  /* Learnly never shows "red = wrong". Gentle coral carries "not yet". */
+  --color-danger: var(--palette-coral-600);
+  --color-danger-soft: var(--palette-coral-100);
+  --color-danger-text: var(--palette-coral-700);
+
+  /* Mastery bands: new → learning → practicing → mastered */
+  --mastery-new: var(--palette-ink-200);
+  --mastery-new-text: var(--palette-ink-600);
+  --mastery-learning: #ffd3c4;
+  --mastery-learning-text: var(--palette-coral-700);
+  --mastery-practicing: #c9c9f6;
+  --mastery-practicing-text: var(--palette-indigo-700);
+  --mastery-mastered: var(--palette-mint-500);
+  --mastery-mastered-text: #ffffff;
+
+  --gradient-brand: linear-gradient(135deg, #7474e8 0%, #5b5bd6 45%, #4646c2 100%);
+  --gradient-warm: linear-gradient(135deg, #ff9a7b 0%, #ff7a59 55%, #f5a524 120%);
+  --gradient-hero: radial-gradient(1200px 600px at 10% -10%, rgba(91, 91, 214, 0.16), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(255, 122, 89, 0.14), transparent 55%);
+
+  /* Typography */
+  --font-display: "Nunito", ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", Menlo, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --text-4xl: clamp(2.5rem, 5vw + 1rem, 4rem);
+
+  --leading-tight: 1.15;
+  --leading-snug: 1.35;
+  --leading-normal: 1.6;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-black: 800;
+
+  /* Spacing (4px grid) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+
+  /* Shape */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+
+  /* Elevation — soft, slightly indigo-tinted shadows */
+  --shadow-xs: 0 1px 2px rgba(28, 27, 41, 0.06);
+  --shadow-sm: 0 1px 2px rgba(28, 27, 41, 0.05), 0 2px 8px rgba(43, 43, 120, 0.06);
+  --shadow-md: 0 2px 4px rgba(28, 27, 41, 0.04), 0 8px 24px rgba(43, 43, 120, 0.08);
+  --shadow-lg: 0 4px 8px rgba(28, 27, 41, 0.04), 0 18px 48px rgba(43, 43, 120, 0.14);
+  --shadow-primary: 0 6px 20px rgba(91, 91, 214, 0.35);
+  --shadow-accent: 0 6px 20px rgba(255, 122, 89, 0.35);
+
+  /* Focus */
+  --focus-ring: 0 0 0 3px var(--color-bg), 0 0 0 5px var(--color-primary);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 360ms;
+
+  /* Layout */
+  --sidebar-width: 264px;
+  --content-max: 1120px;
+  --reading-max: 68ch;
+  --bottom-nav-height: 68px;
+
+  --z-sticky: 10;
+  --z-nav: 20;
+  --z-overlay: 40;
+  --z-toast: 50;
+
+  color-scheme: light;
+}
+
+/* Dark theme: explicit choice, or system preference when no choice is saved. */
+:root[data-theme="dark"] {
+  --color-bg: #14131f;
+  --color-bg-sunken: #0f0e18;
+  --color-surface: #1d1c2b;
+  --color-surface-raised: #252436;
+  --color-surface-hover: #2a293c;
+  --color-border: #33324a;
+  --color-border-strong: #45445f;
+  --color-text: #f3f2f8;
+  --color-text-muted: #b9b8cc;
+  --color-text-subtle: #9190a8;
+  --color-text-inverse: var(--palette-ink-900);
+
+  --color-primary: #8585f0;
+  --color-primary-hover: #9d9df5;
+  --color-primary-active: #b3b3f8;
+  --color-primary-soft: rgba(133, 133, 240, 0.14);
+  --color-primary-soft-strong: rgba(133, 133, 240, 0.24);
+  --color-primary-text: #aeaef7;
+  --color-on-primary: #14131f;
+
+  --color-accent: #ff8a6c;
+  --color-accent-hover: #ffa088;
+  --color-accent-soft: rgba(255, 122, 89, 0.16);
+  --color-accent-text: #ffb39f;
+
+  --color-success: #3dcb8e;
+  --color-success-soft: rgba(47, 182, 124, 0.16);
+  --color-success-text: #7fe0b5;
+  --color-warning: #f7b64a;
+  --color-warning-soft: rgba(245, 165, 36, 0.16);
+  --color-warning-text: #f9cd78;
+  --color-danger: #ff8a6c;
+  --color-danger-soft: rgba(255, 122, 89, 0.16);
+  --color-danger-text: #ffb39f;
+
+  --mastery-new: #34334a;
+  --mastery-new-text: #b9b8cc;
+  --mastery-learning: rgba(255, 122, 89, 0.32);
+  --mastery-learning-text: #ffc9b9;
+  --mastery-practicing: rgba(133, 133, 240, 0.4);
+  --mastery-practicing-text: #d6d6fb;
+  --mastery-mastered: #2fb67c;
+  --mastery-mastered-text: #0b2a1d;
+
+  --gradient-hero: radial-gradient(1200px 600px at 10% -10%, rgba(133, 133, 240, 0.18), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(255, 122, 89, 0.12), transparent 55%);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.3), 0 18px 48px rgba(0, 0, 0, 0.45);
+  --shadow-primary: 0 6px 20px rgba(91, 91, 214, 0.45);
+
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg: #14131f;
+    --color-bg-sunken: #0f0e18;
+    --color-surface: #1d1c2b;
+    --color-surface-raised: #252436;
+    --color-surface-hover: #2a293c;
+    --color-border: #33324a;
+    --color-border-strong: #45445f;
+    --color-text: #f3f2f8;
+    --color-text-muted: #b9b8cc;
+    --color-text-subtle: #9190a8;
+    --color-text-inverse: var(--palette-ink-900);
+
+    --color-primary: #8585f0;
+    --color-primary-hover: #9d9df5;
+    --color-primary-active: #b3b3f8;
+    --color-primary-soft: rgba(133, 133, 240, 0.14);
+    --color-primary-soft-strong: rgba(133, 133, 240, 0.24);
+    --color-primary-text: #aeaef7;
+    --color-on-primary: #14131f;
+
+    --color-accent: #ff8a6c;
+    --color-accent-hover: #ffa088;
+    --color-accent-soft: rgba(255, 122, 89, 0.16);
+    --color-accent-text: #ffb39f;
+
+    --color-success: #3dcb8e;
+    --color-success-soft: rgba(47, 182, 124, 0.16);
+    --color-success-text: #7fe0b5;
+    --color-warning: #f7b64a;
+    --color-warning-soft: rgba(245, 165, 36, 0.16);
+    --color-warning-text: #f9cd78;
+    --color-danger: #ff8a6c;
+    --color-danger-soft: rgba(255, 122, 89, 0.16);
+    --color-danger-text: #ffb39f;
+
+    --mastery-new: #34334a;
+    --mastery-new-text: #b9b8cc;
+    --mastery-learning: rgba(255, 122, 89, 0.32);
+    --mastery-learning-text: #ffc9b9;
+    --mastery-practicing: rgba(133, 133, 240, 0.4);
+    --mastery-practicing-text: #d6d6fb;
+    --mastery-mastered: #2fb67c;
+    --mastery-mastered-text: #0b2a1d;
+
+    --gradient-hero: radial-gradient(1200px 600px at 10% -10%, rgba(133, 133, 240, 0.18), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(255, 122, 89, 0.12), transparent 55%);
+
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.25);
+    --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.3), 0 18px 48px rgba(0, 0, 0, 0.45);
+    --shadow-primary: 0 6px 20px rgba(91, 91, 214, 0.45);
+
+    color-scheme: dark;
+  }
+}
+
