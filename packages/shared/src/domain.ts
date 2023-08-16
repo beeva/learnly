@@ -58,3 +58,74 @@ export interface Skill {
   prerequisiteIds: SkillId[];
 }
 
+export type LessonBlock =
+  | { kind: "heading"; text: string }
+  | { kind: "paragraph"; text: string }
+  | { kind: "callout"; tone: "tip" | "remember" | "try"; text: string }
+  | { kind: "image"; src: string; alt: string; caption?: string }
+  | { kind: "example"; prompt: string; steps: string[]; answer: string }
+  | { kind: "check"; itemId: ItemId };
+
+export interface Lesson {
+  id: LessonId;
+  skillId: SkillId;
+  slug: string;
+  title: string;
+  /** 1 (gentle intro) .. 5 (stretch). */
+  level: 1 | 2 | 3 | 4 | 5;
+  estimatedMinutes: number;
+  blocks: LessonBlock[];
+}
+
+export type ItemKind = "multiple_choice" | "numeric" | "short_text" | "ordering";
+
+interface ItemBase {
+  id: ItemId;
+  skillId: SkillId;
+  kind: ItemKind;
+  prompt: string;
+  /** Calibrated difficulty on the logit scale, roughly -3 (easy) .. +3 (hard). */
+  difficulty: number;
+  hints: string[];
+  explanation: string;
+}
+
+export interface MultipleChoiceItem extends ItemBase {
+  kind: "multiple_choice";
+  choices: { id: string; text: string }[];
+  answer: string;
+}
+
+export interface NumericItem extends ItemBase {
+  kind: "numeric";
+  answer: number;
+  tolerance: number;
+  unit?: string;
+}
+
+export interface ShortTextItem extends ItemBase {
+  kind: "short_text";
+  acceptedAnswers: string[];
+}
+
+export interface OrderingItem extends ItemBase {
+  kind: "ordering";
+  entries: { id: string; text: string }[];
+  answer: string[];
+}
+
+export type Item = MultipleChoiceItem | NumericItem | ShortTextItem | OrderingItem;
+
+/** What the client receives: an item with its answer key removed. */
+export type PublicItem =
+  | Omit<MultipleChoiceItem, "answer" | "explanation">
+  | Omit<NumericItem, "answer" | "tolerance" | "explanation">
+  | Omit<ShortTextItem, "acceptedAnswers" | "explanation">
+  | Omit<OrderingItem, "answer" | "explanation">;
+
+export type Response =
+  | { kind: "multiple_choice"; choiceId: string }
+  | { kind: "numeric"; value: number }
+  | { kind: "short_text"; text: string }
+  | { kind: "ordering"; order: string[] };
+
