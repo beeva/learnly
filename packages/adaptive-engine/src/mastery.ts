@@ -29,3 +29,30 @@ export function initialMastery(skillId: SkillId, ability = 0): SkillMastery {
   };
 }
 
+export interface AttemptEvidence {
+  difficulty: number;
+  correct: boolean;
+  hintsUsed: number;
+  answeredAt: string;
+}
+
+export function applyAttempt(state: SkillMastery, evidence: AttemptEvidence): SkillMastery {
+  const { ability } = updateAbility(
+    state.ability,
+    evidence.difficulty,
+    evidence.correct,
+    state.attempts,
+    evidence.hintsUsed,
+  );
+  const attempts = state.attempts + 1;
+  const pKnown = probabilityCorrect(ability, REFERENCE_DIFFICULTY);
+  return {
+    ...state,
+    ability,
+    pKnown,
+    attempts,
+    band: bandFor(pKnown, attempts),
+    lastPracticedAt: evidence.answeredAt,
+  };
+}
+
