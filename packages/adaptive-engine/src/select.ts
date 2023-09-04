@@ -48,3 +48,44 @@ function scoreCandidate(
   return score;
 }
 
+export function selectNextItem(
+  candidates: Candidate[],
+  masteryBySkill: Map<SkillId, SkillMastery>,
+  options: SelectionOptions = {},
+): Selection | null {
+  const opts = {
+    targetSuccess: options.targetSuccess ?? DEFAULT_TARGET_SUCCESS,
+    recentItemIds: options.recentItemIds ?? [],
+    recentSkillIds: options.recentSkillIds ?? [],
+  };
+  const random = options.random ?? Math.random;
+  const seen = new Set(opts.recentItemIds);
+  const pool = candidates.filter((c) => !seen.has(c.id));
+  if (pool.length === 0) return null;
+
+  const scored = pool
+    .map((c) => ({ c, score: scoreCandidate(c, masteryBySkill.get(c.skillId), opts) }))
+    .sort((a, b) => b.score - a.score);
+
+  // Break ties among the top few so learners don't see a predictable sequence.
+  const best = scored[0]!.score;
+  const shortlist = scored.filter((s) => best - s.score < 0.03).slice(0, 4);
+  const chosen = shortlist[Math.floor(random() * shortlist.length)]!.c;
+  const mastery = masteryBySkill.get(chosen.skillId);
+  const expectedSuccess = probabilityCorrect(mastery?.ability ?? 0, chosen.difficulty);
+  return { item: chosen, expectedSuccess, reason: reasonFor(chosen, mastery, expectedSuccess, opts) };
+}
+
+function reasonFor(
+  item: Candidate,
+  mastery: SkillMastery | undefined,
+  expected: number,
+  opts: { recentSkillIds: SkillId[] },
+): SelectionReason {
+  if (!mastery || mastery.attempts < 2) return "warmup";
+  if (mastery.band === "mastered") return "review";
+  const last = opts.recentSkillIds[opts.recentSkillIds.length - 1];
+  if (last && last !== item.skillId) return "interleave";
+  return expected < 0.65 ? "stretch" : "reinforce";
+}
+
