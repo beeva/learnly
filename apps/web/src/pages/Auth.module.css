@@ -1,0 +1,284 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.9fr) minmax(0, 1.1fr);
+  min-height: 100dvh;
+}
+
+/* ------------------------------------------------------- brand panel */
+.brandPanel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--space-10);
+  overflow: hidden;
+  background: var(--gradient-brand);
+  color: #fff;
+}
+
+.brandPanel::before {
+  content: "";
+  position: absolute;
+  width: 520px;
+  height: 520px;
+  right: -180px;
+  bottom: -160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 122, 89, 0.55), transparent 65%);
+  filter: blur(10px);
+}
+
+.brand,
+.mobileBrand {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: inherit;
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-weight: var(--weight-black);
+  font-size: 1.5rem;
+}
+
+.brand:hover {
+  color: inherit;
+}
+
+.brandArt {
+  position: relative;
+  flex: 1;
+  display: grid;
+  place-items: center;
+}
+
+.orbit {
+  position: relative;
+  width: min(360px, 100%);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(255, 255, 255, 0.28);
+}
+
+.orbit::before {
+  content: "";
+  position: absolute;
+  inset: 22%;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(255, 255, 255, 0.22);
+}
+
+.orbit::after {
+  content: "";
+  position: absolute;
+  inset: 41%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 12px rgba(255, 255, 255, 0.12), 0 0 0 26px rgba(255, 255, 255, 0.06);
+}
+
+.orbitChip {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--palette-ink-900);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+  box-shadow: 0 10px 30px rgba(20, 20, 70, 0.25);
+  animation: drift 7s ease-in-out infinite;
+}
+
+.orbitChip svg {
+  color: var(--palette-coral-600);
+}
+
+.chipA {
+  top: 6%;
+  left: -6%;
+}
+
+.chipB {
+  top: 46%;
+  right: -16%;
+  animation-delay: -2.5s;
+}
+
+.chipB svg {
+  color: var(--palette-indigo-500);
+}
+
+.chipC {
+  bottom: 4%;
+  left: 4%;
+  animation-delay: -4.5s;
+}
+
+.chipC svg {
+  color: var(--palette-mint-600);
+}
+
+@keyframes drift {
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.brandCopy {
+  position: relative;
+  max-width: 34ch;
+}
+
+.brandQuote {
+  font-family: var(--font-display);
+  font-weight: var(--weight-black);
+  font-size: var(--text-2xl);
+  line-height: var(--leading-tight);
+}
+
+.brandSub {
+  margin-top: var(--space-3);
+  opacity: 0.85;
+}
+
+/* -------------------------------------------------------- form panel */
+.formPanel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  padding: var(--space-10) var(--space-6);
+  background: var(--gradient-hero);
+}
+
+.formPanel:focus-visible {
+  box-shadow: none;
+}
+
+.mobileBrand {
+  display: none;
+  color: var(--color-text);
+}
+
+.formCard {
+  width: min(480px, 100%);
+  padding: var(--space-8);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
+}
+
+.formHeader {
+  margin-bottom: var(--space-6);
+}
+
+.formHeader h1 {
+  font-size: var(--text-2xl);
+}
+
+.formHeader p {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.switchLink {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.switchLink a {
+  font-weight: var(--weight-bold);
+}
+
+.strength {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: calc(var(--space-3) * -1);
+}
+
+.strengthBars {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.strengthBar {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-sunken);
+  transition: background-color var(--duration-base) var(--ease-out);
+}
+
+.strength-1 {
+  background: var(--color-accent);
+}
+
+.strength-2 {
+  background: var(--color-warning);
+}
+
+.strength-3,
+.strength-4 {
+  background: var(--color-success);
+}
+
+.strengthLabel {
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
+
+.demo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding-top: var(--space-5);
+  border-top: 1px dashed var(--color-border);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.demoButtons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .brandPanel {
+    display: none;
+  }
+
+  .formPanel {
+    justify-content: flex-start;
+    padding-top: var(--space-8);
+  }
+
+  .mobileBrand {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 520px) {
+  .formCard {
+    padding: var(--space-6) var(--space-5);
+  }
+}
