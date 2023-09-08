@@ -30,3 +30,27 @@ packages/
   adaptive-engine/   Rasch ability model, mastery and item selection
 docs/         Architecture notes and decision records
 ```
+
+## Getting started
+
+Requirements: Node 20, pnpm 9 and Docker.
+
+```bash
+pnpm install
+pnpm db:up          # Postgres 16 in Docker
+pnpm db:migrate
+pnpm db:seed        # Fractions, Pre-Algebra and Reading Detectives courses
+pnpm dev            # api on :4000, web on :5173
+```
+
+The web app can also run without the API: `VITE_USE_MOCKS=true pnpm --filter @learnly/web dev`
+serves realistic mock data through MSW.
+
+Seeded demo accounts (password `learnly-demo-2024`):
+
+| Email | Role |
+|---|---|
+| `maya@demo.learnly.app` | Student, grades 3–5 |
+| `ms.rivera@demo.learnly.app` | Educator (classroom code `FRAC24`) |
+
+In mock mode the sign-in screen has one-tap demo buttons instead.
