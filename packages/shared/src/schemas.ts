@@ -26,3 +26,22 @@ export type SignInInput = z.infer<typeof signInSchema>;
 
 export const refreshSchema = z.object({ refreshToken: z.string().min(20) });
 
+export const responseSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("multiple_choice"), choiceId: z.string().min(1) }),
+  z.object({ kind: z.literal("numeric"), value: z.number().finite() }),
+  z.object({ kind: z.literal("short_text"), text: z.string().max(500) }),
+  z.object({ kind: z.literal("ordering"), order: z.array(z.string()).min(2).max(12) }),
+]);
+
+export const attemptInputSchema = z.object({
+  itemId: z.string().uuid(),
+  sessionId: z.string().uuid().nullable().default(null),
+  response: responseSchema,
+  hintsUsed: z.number().int().min(0).max(5).default(0),
+  durationMs: z.number().int().min(0).max(60 * 60 * 1000),
+  /** Client-generated id so retried submissions are idempotent. */
+  clientAttemptId: z.string().uuid().optional(),
+  answeredAt: z.string().datetime().optional(),
+});
+export type AttemptInput = z.infer<typeof attemptInputSchema>;
+
