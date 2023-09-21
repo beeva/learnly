@@ -129,3 +129,31 @@ export type Response =
   | { kind: "short_text"; text: string }
   | { kind: "ordering"; order: string[] };
 
+export interface Attempt {
+  id: AttemptId;
+  userId: UserId;
+  itemId: ItemId;
+  skillId: SkillId;
+  sessionId: SessionId | null;
+  response: Response;
+  correct: boolean;
+  hintsUsed: number;
+  durationMs: number;
+  answeredAt: string;
+}
+
+export type MasteryBand = "new" | "learning" | "practicing" | "mastered";
+
+export interface SkillMastery {
+  skillId: SkillId;
+  /** Probability (0..1) that the student has mastered the skill. */
+  pKnown: number;
+  /** Ability estimate on the same logit scale as item difficulty. */
+  ability: number;
+  band: MasteryBand;
+  attempts: number;
+  lastPracticedAt: string | null;
+  /** When the spaced-repetition scheduler wants to see this skill again. */
+  dueAt: string | null;
+}
+
