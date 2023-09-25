@@ -1,0 +1,477 @@
+.page {
+  display: flex;
+  flex-direction: column;
+}
+
+.muted {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* ------------------------------------------------------------- cover */
+.cover {
+  --hue: 245;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(120% 140% at 0% 0%, hsl(var(--hue) 85% 72%) 0%, transparent 55%),
+    radial-gradient(120% 140% at 100% 100%, hsl(calc(var(--hue) + 40) 90% 70%) 0%, transparent 60%),
+    linear-gradient(135deg, hsl(var(--hue) 70% 62%), hsl(calc(var(--hue) + 25) 75% 55%));
+}
+
+.cover-sm {
+  height: 72px;
+}
+
+.cover-md {
+  height: 140px;
+}
+
+.cover-lg {
+  height: 100%;
+  min-height: 220px;
+}
+
+.glyph {
+  position: absolute;
+  left: calc(6% + var(--i) * 16%);
+  top: calc(12% + var(--i) * 3%);
+  font-family: var(--font-display);
+  font-weight: var(--weight-black);
+  font-size: calc(1.6rem + var(--i) * 0.25rem);
+  color: rgba(255, 255, 255, 0.55);
+  transform: rotate(calc(var(--i) * 17deg - 30deg));
+  text-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  user-select: none;
+}
+
+.glyph:nth-child(odd) {
+  top: 52%;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.cover-sm .glyph {
+  font-size: 1.1rem;
+}
+
+/* ----------------------------------------------------------- catalog */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.filter {
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-sm);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.filter:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+
+.filter:focus-visible {
+  border-radius: var(--radius-pill);
+}
+
+.filterActive,
+.filterActive:hover {
+  background: var(--color-text);
+  border-color: var(--color-text);
+  color: var(--color-bg);
+}
+
+.search {
+  width: min(320px, 100%);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-5);
+}
+
+.gridItem {
+  display: flex;
+}
+
+.courseCard {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: hidden;
+}
+
+.courseBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  flex: 1;
+  padding: var(--space-5);
+}
+
+.courseMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.courseTitle {
+  font-size: var(--text-xl);
+}
+
+.courseLink {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.courseLink:hover {
+  color: var(--color-primary-text);
+}
+
+/* Whole-card click target while keeping one accessible link. */
+.courseLink::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-lg);
+}
+
+.courseLink:focus-visible {
+  box-shadow: none;
+}
+
+.courseLink:focus-visible::after {
+  box-shadow: var(--focus-ring);
+}
+
+.courseDescription {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.courseFooter {
+  display: flex;
+  gap: var(--space-5);
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-subtle);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.courseFooter span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ------------------------------------------------------------ detail */
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: flex-start;
+  margin-bottom: var(--space-5);
+  color: var(--color-text-muted);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(200px, 0.8fr) minmax(0, 1.4fr);
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+}
+
+.heroContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-8);
+}
+
+.heroTitle {
+  font-size: clamp(1.8rem, 2vw + 1rem, 2.5rem);
+}
+
+.heroDescription {
+  color: var(--color-text-muted);
+  max-width: 60ch;
+}
+
+.stats {
+  display: flex;
+  gap: var(--space-8);
+  margin: 0;
+}
+
+.stats div {
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.stats dt {
+  font-size: var(--text-sm);
+  color: var(--color-text-subtle);
+}
+
+.stats dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--weight-black);
+  font-size: var(--text-xl);
+}
+
+.heroCtas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+@media (max-width: 760px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .hero .cover-lg {
+    min-height: 120px;
+  }
+
+  .heroContent {
+    padding: var(--space-6);
+  }
+}
+
+.mapSection {
+  margin-top: var(--space-12);
+}
+
+.mapHeader {
+  margin-bottom: var(--space-6);
+}
+
+.mapHeader h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.mapHeader h2 svg {
+  color: var(--color-accent);
+}
+
+.units {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.unit {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+.unitRail {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.unitRail::after {
+  content: "";
+  position: absolute;
+  top: 52px;
+  bottom: calc(var(--space-5) * -1);
+  width: 3px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(to bottom, var(--color-border-strong) 0 6px, transparent 6px 12px);
+}
+
+.unit:last-child .unitRail::after {
+  display: none;
+}
+
+.unitNumber {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-top: var(--space-4);
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-family: var(--font-display);
+  font-weight: var(--weight-black);
+  box-shadow: 0 0 0 6px var(--color-bg), var(--shadow-primary);
+}
+
+.unitCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.unitTitle {
+  font-size: var(--text-xl);
+}
+
+.unitSummary {
+  color: var(--color-text-muted);
+}
+
+.skills {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.skill {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  transition: border-color var(--duration-fast), background-color var(--duration-fast);
+}
+
+.skillOpen {
+  border-color: var(--color-primary-soft-strong);
+  background: var(--color-surface);
+}
+
+.skillButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 56px;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  background: transparent;
+  text-align: left;
+  border-radius: inherit;
+}
+
+.skillDot {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 3px solid var(--color-primary);
+  background: var(--color-surface);
+}
+
+.skillText {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.skillName {
+  font-weight: var(--weight-semibold);
+}
+
+.skillPrereq {
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
+
+.skillCode {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
+
+.skillChevron {
+  color: var(--color-text-subtle);
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+.skillOpen .skillChevron {
+  transform: rotate(180deg);
+}
+
+.skillPanel {
+  overflow: hidden;
+}
+
+.skillPanelInner {
+  padding: 0 var(--space-4) var(--space-4) calc(var(--space-4) + 24px);
+}
+
+.lessonList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.lessonLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.lessonLink:hover {
+  background: var(--color-primary-soft);
+  color: var(--color-text);
+}
+
+.lessonPlay {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--color-primary-soft-strong);
+  color: var(--color-primary-text);
+}
+
+.lessonTitle {
+  flex: 1;
+  font-weight: var(--weight-medium);
+}
+
+.lessonMeta {
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+  white-space: nowrap;
+}
