@@ -11,3 +11,24 @@ describe("probabilityCorrect", () => {
   });
 });
 
+describe("updateAbility", () => {
+  it("moves up after a correct answer and down after a miss", () => {
+    expect(updateAbility(0, 0, true, 0).ability).toBeGreaterThan(0);
+    expect(updateAbility(0, 0, false, 0).ability).toBeLessThan(0);
+  });
+
+  it("moves less when the answer was expected", () => {
+    const surprising = updateAbility(0, 2, true, 3).ability;
+    const expected = updateAbility(0, -2, true, 3).ability;
+    expect(surprising).toBeGreaterThan(expected);
+  });
+
+  it("treats hinted correct answers as partial evidence", () => {
+    expect(updateAbility(0, 0, true, 0, 2).ability).toBeLessThan(updateAbility(0, 0, true, 0, 0).ability);
+  });
+
+  it("shrinks the step size as evidence accumulates", () => {
+    expect(kFactor(0)).toBeGreaterThan(kFactor(10));
+    expect(kFactor(1000)).toBe(0.15);
+  });
+});
