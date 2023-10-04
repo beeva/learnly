@@ -15,3 +15,22 @@ describe("bandFor", () => {
   });
 });
 
+describe("applyAttempt", () => {
+  it("reaches mastered after consistent success on grade-level items", () => {
+    let state = initialMastery(skill);
+    for (let i = 0; i < 12; i++) {
+      state = applyAttempt(state, { difficulty: 1.5, correct: true, hintsUsed: 0, answeredAt: "2023-07-01T10:00:00Z" });
+    }
+    expect(state.band).toBe("mastered");
+    expect(state.attempts).toBe(12);
+    expect(state.lastPracticedAt).toBe("2023-07-01T10:00:00Z");
+  });
+
+  it("stays in learning after repeated misses", () => {
+    let state = initialMastery(skill);
+    for (let i = 0; i < 5; i++) {
+      state = applyAttempt(state, { difficulty: -0.5, correct: false, hintsUsed: 1, answeredAt: "2023-07-01T10:00:00Z" });
+    }
+    expect(state.band).toBe("learning");
+  });
+});
