@@ -89,3 +89,11 @@ function reasonFor(
   return expected < 0.65 ? "stretch" : "reinforce";
 }
 
+export const REASON_COPY: Record<SelectionReason, string> = {
+  warmup: "A warm-up to see where you are.",
+  stretch: "A little stretch — you're ready for it.",
+  review: "A quick review so it sticks.",
+  reinforce: "One more like this to lock it in.",
+  interleave: "Mixing it up helps your brain remember.",
+};
+
