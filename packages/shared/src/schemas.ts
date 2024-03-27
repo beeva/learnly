@@ -45,3 +45,15 @@ export const attemptInputSchema = z.object({
 });
 export type AttemptInput = z.infer<typeof attemptInputSchema>;
 
+export const startSessionSchema = z.object({
+  courseId: z.string().uuid(),
+  kind: z.enum(["diagnostic", "practice", "review"]),
+  targetItems: z.number().int().min(3).max(30).optional(),
+});
+export type StartSessionInput = z.infer<typeof startSessionSchema>;
+
+export const paginationSchema = z.object({
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
