@@ -30,3 +30,33 @@ export function startDiagnostic(skillIds: SkillId[]): DiagnosticState {
   };
 }
 
+function isSkillSettled(answers: boolean[]): boolean {
+  if (answers.length >= DIAGNOSTIC_LIMITS.maxPerSkill) return true;
+  if (answers.length < 2) return false;
+  // Two of the same answer in a row is enough signal for a light diagnostic.
+  return answers[answers.length - 1] === answers[answers.length - 2];
+}
+
+function totalAsked(state: DiagnosticState): number {
+  return state.askedItemIds.size;
+}
+
+export function nextDiagnosticItem(state: DiagnosticState, items: Candidate[]): Candidate | null {
+  if (totalAsked(state) >= DIAGNOSTIC_LIMITS.maxTotal) return null;
+  for (const skillId of state.skillOrder) {
+    const answers = state.perSkillAnswers.get(skillId) ?? [];
+    if (isSkillSettled(answers)) continue;
+    const ability = state.mastery.get(skillId)?.ability ?? 0;
+    // Maximum information for the Rasch model is where p = 0.5.
+    const pool = items.filter((i) => i.skillId === skillId && !state.askedItemIds.has(i.id));
+    if (pool.length === 0) continue;
+    return pool.reduce((best, item) =>
+      Math.abs(probabilityCorrect(ability, item.difficulty) - 0.5) <
+      Math.abs(probabilityCorrect(ability, best.difficulty) - 0.5)
+        ? item
+        : best,
+    );
+  }
+  return null;
+}
+
