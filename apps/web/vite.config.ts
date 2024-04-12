@@ -20,3 +20,11 @@ const config: UserConfig = {
 
 export default defineConfig(() => config);
 
+config.test = {
+  environment: "jsdom",
+  setupFiles: ["./src/test/setup.ts"],
+  include: ["src/**/*.test.{ts,tsx}"],
+  css: { modules: { classNameStrategy: "non-scoped" } },
+  restoreMocks: true,
+};
+
