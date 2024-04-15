@@ -157,3 +157,45 @@ export interface SkillMastery {
   dueAt: string | null;
 }
 
+export type SessionKind = "diagnostic" | "practice" | "review";
+
+export interface Session {
+  id: SessionId;
+  userId: UserId;
+  courseId: CourseId;
+  kind: SessionKind;
+  startedAt: string;
+  completedAt: string | null;
+  itemsAnswered: number;
+  itemsCorrect: number;
+}
+
+export interface NextItemResponse {
+  session: Session;
+  item: PublicItem | null;
+  /** Human-friendly reason the engine picked this item, shown as a subtle hint. */
+  rationale: string;
+  progress: { answered: number; target: number };
+}
+
+export interface AttemptResult {
+  attempt: Attempt;
+  correct: boolean;
+  explanation: string;
+  correctResponse: Response;
+  mastery: SkillMastery;
+  xpEarned: number;
+  encouragementKey: string;
+}
+
+export interface DiagnosticSummary {
+  sessionId: SessionId;
+  startingPoints: {
+    skillId: SkillId;
+    skillName: string;
+    band: MasteryBand;
+    pKnown: number;
+  }[];
+  recommendedLessonId: LessonId | null;
+}
+
