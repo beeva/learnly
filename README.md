@@ -54,3 +54,12 @@ Seeded demo accounts (password `learnly-demo-2024`):
 | `ms.rivera@demo.learnly.app` | Educator (classroom code `FRAC24`) |
 
 In mock mode the sign-in screen has one-tap demo buttons instead.
+
+## The learner experience
+
+- **Diagnostic** shows one calm question at a time. Students don't see a score; they get a
+  friendly summary of where they'll start.
+- **Lesson player** renders headings, callouts, step-by-step worked examples and inline checks.
+- **Practice** uses multiple choice, numeric, short answer and ordering items, with hints,
+  encouraging feedback and an XP reward for every effort.
+- **Progress** shows a level ring, a streak with a forgiving "freeze" and a mastery map for each unit.
