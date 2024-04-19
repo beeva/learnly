@@ -34,3 +34,18 @@ describe("selectNextItem", () => {
   });
 });
 
+import { adaptiveTarget } from "../src/select.js";
+
+describe("adaptiveTarget", () => {
+  it("eases off after two misses", () => {
+    expect(adaptiveTarget([true, false, false])).toBeCloseTo(0.87);
+  });
+
+  it("nudges challenge up after three wins", () => {
+    expect(adaptiveTarget([true, true, true])).toBeCloseTo(0.67);
+  });
+
+  it("keeps the base otherwise", () => {
+    expect(adaptiveTarget([false, true])).toBe(0.75);
+  });
+});
