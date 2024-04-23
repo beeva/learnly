@@ -7,3 +7,5 @@
  */
 export const MIGRATIONS: string[] = ["001_users_and_auth", "002_catalog", "003_attempts_and_mastery"];
 
+MIGRATIONS.push("004_sessions", "005_progress");
+
