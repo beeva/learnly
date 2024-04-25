@@ -320,3 +320,78 @@ export const queryKeys = {
   lesson: (id: string) => ["lesson", id] as const,
 };
 
+type AttemptResult = import("@learnly/shared").AttemptResult;
+type NextItemResponse = import("@learnly/shared").NextItemResponse;
+type Session = import("@learnly/shared").Session;
+type DiagnosticSummary = import("@learnly/shared").DiagnosticSummary;
+type SkillMastery = import("@learnly/shared").SkillMastery;
+type StartSessionInput = import("@learnly/shared").StartSessionInput;
+type PreferencesInput = import("@learnly/shared").PreferencesInput;
+type LevelInfo = import("@learnly/shared").LevelInfo;
+type StreakState = import("@learnly/shared").StreakState;
+
+export interface ProgressSummary {
+  totalXp: number;
+  level: LevelInfo;
+  streak: StreakState;
+  minutesToday: number;
+  dailyGoalMinutes: number;
+}
+
+export interface ActivityDay {
+  day: string;
+  minutes: number;
+  itemsCorrect: number;
+}
+
+export interface ProgressResponse extends ProgressSummary {
+  mastery: SkillMastery[];
+  recentActivity: ActivityDay[];
+}
+
+export type RecommendationType = "lesson" | "practice" | "review" | "diagnostic";
+
+export interface Recommendation {
+  type: RecommendationType;
+  title: string;
+  subtitle: string;
+  lessonId?: string;
+  courseSlug: string;
+  estimatedMinutes: number;
+}
+
+export interface SessionCompleteResponse {
+  session: Session;
+  xpEarned: number;
+  summary?: DiagnosticSummary;
+}
+
+export interface LessonCompleteResponse {
+  xpEarned: number;
+  progress: ProgressSummary;
+}
+
+export const learnerApi = {
+  startSession: (input: StartSessionInput) => request<NextItemResponse>("/sessions", { method: "POST", body: input }),
+  nextItem: (sessionId: string) => request<NextItemResponse>(`/sessions/${encodeURIComponent(sessionId)}/next`),
+  completeSession: (sessionId: string) =>
+    request<SessionCompleteResponse>(`/sessions/${encodeURIComponent(sessionId)}/complete`, { method: "POST" }),
+  submitAttempt: (input: AttemptInput) => api.submitAttempt<AttemptResult>(input),
+  completeLesson: (lessonId: string, durationMs: number) =>
+    request<LessonCompleteResponse>(`/lessons/${encodeURIComponent(lessonId)}/complete`, {
+      method: "POST",
+      body: { durationMs },
+    }),
+  progress: () => request<ProgressResponse>("/progress"),
+  courseMastery: (slug: string) => request<{ mastery: SkillMastery[] }>(`/courses/${encodeURIComponent(slug)}/mastery`),
+  recommendations: () => request<{ next: Recommendation[] }>("/recommendations"),
+  updatePreferences: (input: PreferencesInput) =>
+    request<{ preferences: Preferences }>("/me/preferences", { method: "PATCH", body: input }),
+};
+
+export const learnerKeys = {
+  progress: ["progress"] as const,
+  recommendations: ["recommendations"] as const,
+  courseMastery: (slug: string) => ["course-mastery", slug] as const,
+};
+
