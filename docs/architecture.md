@@ -21,3 +21,16 @@
 `users` → `attempts` → `skill_mastery` (one row per user × skill), and
 `courses` → `units` → `skills` → `lessons` / `items`. Item answer keys never leave the API.
 Clients receive `PublicItem`, and scoring happens server-side.
+
+## Sessions and the attempt pipeline
+
+```
+POST /v1/attempts
+  validate (zod) → load item + mastery row FOR UPDATE
+  → scoreResponse() → engine.applyAttempt() → xpForAttempt() + advanceStreak()
+  → insert attempt, upsert mastery, bump progress  (single transaction)
+  → AttemptResult (correct response + explanation + encouragement key)
+```
+
+A diagnostic session rebuilds its state from the attempts already in the session,
+so the API stays stateless and a student can resume on a different device.
