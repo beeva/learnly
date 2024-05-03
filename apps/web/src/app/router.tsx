@@ -88,3 +88,22 @@ export const routes: RouteObject[] = [rootRoute];
 
 registerNavItem({ id: "courses", to: "/courses", label: "Courses", icon: Icons.BookIcon, order: 20 });
 
+delete homeRoute.element;
+homeRoute.lazy = () => import("../pages/Home").then((m) => ({ Component: m.HomePage }));
+
+shellChildren.push(
+  { path: "progress", lazy: () => import("../pages/Progress").then((m) => ({ Component: m.ProgressPage })) },
+  { path: "settings", lazy: () => import("../pages/Settings").then((m) => ({ Component: m.SettingsPage })) },
+);
+
+focusChildren.push(
+  { path: "welcome", lazy: () => import("../features/diagnostic/DiagnosticFlow").then((m) => ({ Component: m.WelcomePage })) },
+  { path: "assess/:courseSlug", lazy: () => import("../features/diagnostic/DiagnosticFlow").then((m) => ({ Component: m.DiagnosticPage })) },
+  { path: "lessons/:lessonId", lazy: () => import("../features/lesson/LessonPlayer").then((m) => ({ Component: m.LessonPlayerPage })) },
+  { path: "practice/:courseSlug", lazy: () => import("../features/practice/PracticeSession").then((m) => ({ Component: m.PracticePage })) },
+);
+
+registerNavItem({ id: "home", to: "/home", label: "Home", icon: Icons.HomeIcon, order: 0 });
+registerNavItem({ id: "progress", to: "/progress", label: "Progress", icon: Icons.ChartIcon, order: 40 });
+registerNavItem({ id: "settings", to: "/settings", label: "Settings", icon: Icons.SettingsIcon, order: 90 });
+
