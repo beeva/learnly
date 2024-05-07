@@ -68,3 +68,15 @@ queueMicrotask(() => {
   });
 });
 
+const useMockApi = import.meta.env.MODE === "mock" || import.meta.env.VITE_USE_MOCKS === "true";
+if (useMockApi) boot.push(import("./mocks/browser").then((m) => m.startMockApi()));
+
+boot.push(
+  import("./i18n/I18nProvider").then(({ I18nProvider }) => {
+    wrappers.push((children) => <I18nProvider>{children}</I18nProvider>);
+  }),
+  import("./hooks/preferences").then(({ MotionPreferences }) => {
+    wrappers.push((children) => <MotionPreferences>{children}</MotionPreferences>);
+  }),
+);
+
