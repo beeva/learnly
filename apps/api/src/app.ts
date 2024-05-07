@@ -86,3 +86,10 @@ export function createApp(container: Container, modules: FeatureModule[] = featu
   return app;
 }
 
+import { progressModule } from "./modules/progress/index.js";
+import { sessionsModule } from "./modules/sessions/index.js";
+
+// Sessions validates session ownership before an attempt is scored; progress then wraps
+// the whole pipeline to award XP and pick encouragement.
+featureModules.push(sessionsModule, progressModule);
+
