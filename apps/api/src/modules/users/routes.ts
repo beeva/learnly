@@ -14,3 +14,13 @@ usersRouter.get(
   }),
 );
 
+usersRouter.patch(
+  "/me/preferences",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { userId } = currentUser(req);
+    const patch = parse(shared.preferencesSchema, req.body);
+    const preferences = await req.container.resolve("profileService").updatePreferences(userId, patch);
+    res.json({ preferences });
+  }),
+);
