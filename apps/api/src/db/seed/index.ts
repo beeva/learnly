@@ -185,3 +185,8 @@ if (invokedDirectly) {
   });
 }
 
+import { preAlgebra } from "./pre-algebra.js";
+import { readingDetectives } from "./reading.js";
+
+SEED_COURSES.push(preAlgebra, readingDetectives);
+
