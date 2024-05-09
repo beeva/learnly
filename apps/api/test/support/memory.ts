@@ -386,3 +386,158 @@ installers.push((container, store) => {
     .register("masteryRepository", () => store.mastery);
 });
 
+import { NEW_LEARNER_FREEZES, type ActivityDay, type ActivityDelta, type ProgressRecord, type ProgressRepository, type RecentResult, type XpAward, type XpReason } from "../../src/modules/progress/repository.js";
+import type { NewSession, SessionAnswer, SessionRecord, SessionRepository } from "../../src/modules/sessions/repository.js";
+import type { DiagnosticSummary, SessionId, SessionKind, StreakState } from "@learnly/shared";
+
+export class MemorySessions implements SessionRepository {
+  readonly rows = new Map<SessionId, SessionRecord>();
+
+  constructor(private readonly attempts: MemoryAttempts) {}
+
+  async create(session: NewSession): Promise<SessionRecord> {
+    const record: SessionRecord = {
+      id: randomUUID() as SessionId,
+      userId: session.userId,
+      courseId: session.courseId,
+      kind: session.kind,
+      startedAt: session.startedAt,
+      completedAt: null,
+      itemsAnswered: 0,
+      itemsCorrect: 0,
+      targetItems: session.targetItems,
+      summary: null,
+    };
+    this.rows.set(record.id, record);
+    return clone(record);
+  }
+
+  async find(id: SessionId): Promise<SessionRecord | null> {
+    const row = this.rows.get(id);
+    return row ? clone(row) : null;
+  }
+
+  async recordAnswer(id: SessionId, correct: boolean): Promise<void> {
+    const row = this.rows.get(id);
+    if (!row) return;
+    row.itemsAnswered += 1;
+    if (correct) row.itemsCorrect += 1;
+  }
+
+  async complete(id: SessionId, at: string, summary: DiagnosticSummary | null): Promise<SessionRecord> {
+    const row = this.rows.get(id);
+    if (!row) throw new Error(`no session ${id}`);
+    row.completedAt ??= at;
+    row.summary ??= summary;
+    return clone(row);
+  }
+
+  async answers(id: SessionId): Promise<SessionAnswer[]> {
+    return this.attempts
+      .ordered((row) => row.sessionId === id)
+      .map(({ itemId, skillId, correct, answeredAt }) => ({ itemId, skillId, correct, answeredAt }));
+  }
+
+  async hasCompleted(userId: UserId, courseId: CourseId, kind: SessionKind): Promise<boolean> {
+    return [...this.rows.values()].some(
+      (row) => row.userId === userId && row.courseId === courseId && row.kind === kind && row.completedAt !== null,
+    );
+  }
+}
+
+export class MemoryProgress implements ProgressRepository {
+  readonly records = new Map<UserId, ProgressRecord>();
+  readonly xp: (XpAward & { userId: UserId })[] = [];
+  readonly activity = new Map<string, { userId: UserId; day: string } & ActivityDelta>();
+  readonly completions: { userId: UserId; lessonId: LessonId; durationMs: number; at: string }[] = [];
+
+  constructor(private readonly attempts: MemoryAttempts) {}
+
+  async get(userId: UserId): Promise<ProgressRecord> {
+    const streak: StreakState = { current: 0, longest: 0, lastActiveDay: null, freezesAvailable: NEW_LEARNER_FREEZES };
+    return clone(this.records.get(userId) ?? { totalXp: 0, streak });
+  }
+
+  async saveStreak(userId: UserId, streak: StreakState): Promise<void> {
+    const record = await this.get(userId);
+    this.records.set(userId, { ...record, streak: clone(streak) });
+  }
+
+  async addXp(userId: UserId, award: XpAward): Promise<number> {
+    if (award.amount <= 0) return 0;
+    const duplicate = this.xp.some((e) => e.userId === userId && e.reason === award.reason && e.sourceId === award.sourceId);
+    if (duplicate) return 0;
+    this.xp.push({ ...award, userId });
+    const record = await this.get(userId);
+    this.records.set(userId, { ...record, totalXp: record.totalXp + award.amount });
+    return award.amount;
+  }
+
+  async xpFor(userId: UserId, reason: XpReason, sourceId: string): Promise<number> {
+    return this.xp.find((e) => e.userId === userId && e.reason === reason && e.sourceId === sourceId)?.amount ?? 0;
+  }
+
+  async xpForSession(userId: UserId, sessionId: SessionId): Promise<number> {
+    return this.xp.filter((e) => e.userId === userId && e.sessionId === sessionId).reduce((sum, e) => sum + e.amount, 0);
+  }
+
+  async addActivity(userId: UserId, day: string, delta: ActivityDelta): Promise<void> {
+    const key = `${userId}:${day}`;
+    const row = this.activity.get(key) ?? { userId, day, seconds: 0, answered: 0, correct: 0, lessons: 0 };
+    this.activity.set(key, {
+      ...row,
+      seconds: row.seconds + Math.round(delta.seconds),
+      answered: row.answered + delta.answered,
+      correct: row.correct + delta.correct,
+      lessons: row.lessons + delta.lessons,
+    });
+  }
+
+  async activityBetween(userId: UserId, fromDay: string, toDay: string): Promise<ActivityDay[]> {
+    return [...this.activity.values()]
+      .filter((row) => row.userId === userId && row.day >= fromDay && row.day <= toDay)
+      .sort((a, b) => a.day.localeCompare(b.day))
+      .map((row) => ({ day: row.day, minutes: Math.round(row.seconds / 60), itemsCorrect: row.correct }));
+  }
+
+  async recentResults(userId: UserId, limit: number): Promise<RecentResult[]> {
+    return this.attempts
+      .ordered((row) => row.userId === userId)
+      .reverse()
+      .slice(0, limit)
+      .map(({ itemId, skillId, correct, hintsUsed, durationMs, answeredAt }) => ({
+        itemId,
+        skillId,
+        correct,
+        hintsUsed,
+        durationMs,
+        answeredAt,
+      }));
+  }
+
+  async countItemAttempts(userId: UserId, itemId: ItemId): Promise<number> {
+    return this.attempts.rows.filter((row) => row.userId === userId && row.itemId === itemId).length;
+  }
+
+  async recordLessonCompletion(userId: UserId, lessonId: LessonId, durationMs: number, at: string): Promise<void> {
+    this.completions.push({ userId, lessonId, durationMs, at });
+  }
+
+  async completedLessonIds(userId: UserId): Promise<LessonId[]> {
+    return [...new Set(this.completions.filter((c) => c.userId === userId).map((c) => c.lessonId))];
+  }
+}
+
+export interface MemoryStore {
+  sessions: MemorySessions;
+  progress: MemoryProgress;
+}
+
+installers.push((container, store) => {
+  store.sessions = new MemorySessions(store.attempts);
+  store.progress = new MemoryProgress(store.attempts);
+  container
+    .register("sessionRepository", () => store.sessions)
+    .register("progressRepository", () => store.progress);
+});
+
