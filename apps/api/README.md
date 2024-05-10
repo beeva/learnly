@@ -67,3 +67,24 @@ Every failure uses one envelope, with messages written to be shown as-is:
 { "error": { "code": "validation_failed", "message": "Some fields need another look.", "details": { } } }
 ```
 
+
+## Learning loop
+
+`POST /v1/attempts` runs a small pipeline; each step is a decorator around the previous one:
+
+1. **attempts** — validate, score, record (idempotent on `clientAttemptId`), update mastery
+2. **sessions** — attempts inside a session must belong to an open session you own
+3. **progress** — XP (`xpForAttempt`: first-try bonus, hint penalty), the daily streak with
+   its forgiving freeze, and an encouragement key chosen from what just happened
+
+Sessions are stateless on the server: the next item is recomputed from the answers so far.
+
+- **diagnostic** — the engine's planner probes up to six skills spread across the course,
+  stops a skill once two answers agree, and summarises starting points
+- **practice** — `selectNextItem` over the next few unlocked skills, aiming for the success
+  rate from `adaptiveTarget` (easier after two misses, harder after a hot streak)
+- **review** — revisits skills that are going stale
+
+`GET /v1/recommendations` turns mastery, lesson completions and recent pace into
+"what next": a lesson at the right level, practice, a review, or the diagnostic.
+
