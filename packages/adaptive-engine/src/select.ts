@@ -97,3 +97,14 @@ export const REASON_COPY: Record<SelectionReason, string> = {
   interleave: "Mixing it up helps your brain remember.",
 };
 
+/**
+ * After two misses in a row we ease off, so a struggling learner gets a win before
+ * the next stretch. After a hot streak we nudge the challenge up.
+ */
+export function adaptiveTarget(recentCorrect: boolean[], base = DEFAULT_TARGET_SUCCESS): number {
+  const last = recentCorrect.slice(-3);
+  const misses = last.filter((c) => !c).length;
+  if (last.length >= 2 && !last[last.length - 1] && !last[last.length - 2]) return Math.min(0.9, base + 0.12);
+  if (last.length === 3 && misses === 0) return Math.max(0.6, base - 0.08);
+  return base;
+}
