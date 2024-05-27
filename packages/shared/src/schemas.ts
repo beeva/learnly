@@ -57,3 +57,16 @@ export const paginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
+export const preferencesSchema = z.object({
+  displayName: z.string().trim().min(1).max(60).optional(),
+  avatarColor: z
+    .string()
+    .regex(/^#[0-9a-f]{6}$/i)
+    .optional(),
+  dailyGoalMinutes: z.number().int().min(5).max(120).optional(),
+  reducedMotion: z.boolean().optional(),
+  soundEffects: z.boolean().optional(),
+  locale: z.enum(["en", "es", "fil"]).optional(),
+});
+export type PreferencesInput = z.infer<typeof preferencesSchema>;
+
