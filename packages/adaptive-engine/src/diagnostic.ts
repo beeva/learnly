@@ -60,3 +60,45 @@ export function nextDiagnosticItem(state: DiagnosticState, items: Candidate[]): 
   return null;
 }
 
+export function recordDiagnosticAnswer(
+  state: DiagnosticState,
+  item: Candidate,
+  correct: boolean,
+  answeredAt: string,
+): DiagnosticState {
+  const current = state.mastery.get(item.skillId) ?? initialMastery(item.skillId);
+  const mastery = new Map(state.mastery);
+  mastery.set(
+    item.skillId,
+    applyAttempt(current, { difficulty: item.difficulty, correct, hintsUsed: 0, answeredAt }),
+  );
+  const perSkillAnswers = new Map(state.perSkillAnswers);
+  perSkillAnswers.set(item.skillId, [...(perSkillAnswers.get(item.skillId) ?? []), correct]);
+  return {
+    ...state,
+    mastery,
+    perSkillAnswers,
+    askedItemIds: new Set([...state.askedItemIds, item.id]),
+  };
+}
+
+export interface StartingPoint {
+  skillId: SkillId;
+  band: MasteryBand;
+  pKnown: number;
+}
+
+export function summarizeDiagnostic(state: DiagnosticState): StartingPoint[] {
+  return state.skillOrder.map((skillId) => {
+    const m = state.mastery.get(skillId)!;
+    return { skillId, band: m.band, pKnown: m.pKnown };
+  });
+}
+
+/**
+ * First skill (in curriculum order) the learner hasn't shown they can practise yet.
+ * Skills already in the "practicing" range are refined by practice, not re-taught.
+ */
+export function recommendedStartSkill(points: StartingPoint[]): SkillId | null {
+  return points.find((p) => p.pKnown < BAND_THRESHOLDS.practicing)?.skillId ?? null;
+}
