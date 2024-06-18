@@ -19,3 +19,26 @@ describe("levels", () => {
   });
 });
 
+describe("advanceStreak", () => {
+  const start: StreakState = { current: 4, longest: 9, lastActiveDay: "2024-04-10", freezesAvailable: 1 };
+
+  it("is idempotent within a day", () => {
+    expect(advanceStreak(start, "2024-04-10")).toBe(start);
+  });
+
+  it("extends on consecutive days", () => {
+    expect(advanceStreak(start, "2024-04-11").current).toBe(5);
+  });
+
+  it("spends a freeze to forgive one missed day", () => {
+    const next = advanceStreak(start, "2024-04-12");
+    expect(next.current).toBe(5);
+    expect(next.freezesAvailable).toBe(0);
+  });
+
+  it("resets after a longer gap but keeps the record", () => {
+    const next = advanceStreak(start, "2024-04-20");
+    expect(next.current).toBe(1);
+    expect(next.longest).toBe(9);
+  });
+});
