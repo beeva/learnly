@@ -1,0 +1,496 @@
+openapi: 3.1.0
+info:
+  title: Learnly API
+  version: 1.9.0
+  summary: Adaptive learning for every student.
+  description: |
+    REST API behind the Learnly web and mobile apps. Every body is JSON, every error uses
+    the same envelope, and every write a device can make offline is idempotent.
+
+    Authentication: `Authorization: Bearer <accessToken>` (15-minute JWT). Refresh tokens
+    rotate on every use; replaying a rotated token revokes the whole session family.
+  contact:
+    name: Learnly engineering
+servers:
+  - url: http://localhost:4000
+    description: Local development
+security:
+  - bearer: []
+tags:
+  - name: auth
+  - name: catalog
+  - name: learning
+  - name: progress
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Error:
+      description: Error envelope
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum: [validation_failed, unauthorized, forbidden, not_found, conflict, rate_limited, internal]
+            message: { type: string, description: Human-friendly, safe to show as-is. }
+            details: {}
+    User:
+      type: object
+      required: [id, email, displayName, role, gradeBand, avatarColor, locale, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        displayName: { type: string }
+        role: { type: string, enum: [student, educator, admin] }
+        gradeBand: { type: [string, "null"], enum: [k-2, 3-5, 6-8, 9-12, null] }
+        avatarColor: { type: string, pattern: "^#[0-9A-Fa-f]{6}$" }
+        locale: { type: string }
+        createdAt: { type: string, format: date-time }
+    Session:
+      type: object
+      required: [user, accessToken, refreshToken]
+      properties:
+        user: { $ref: "#/components/schemas/User" }
+        accessToken: { type: string }
+        refreshToken: { type: string }
+    Preferences:
+      type: object
+      properties:
+        dailyGoalMinutes: { type: integer, minimum: 5, maximum: 120 }
+        reducedMotion: { type: boolean }
+        soundEffects: { type: boolean }
+        locale: { type: string, enum: [en, es, fil] }
+    StreakState:
+      type: object
+      properties:
+        current: { type: integer }
+        longest: { type: integer }
+        lastActiveDay: { type: [string, "null"], format: date }
+        freezesAvailable: { type: integer }
+    ProgressSummary:
+      type: object
+      properties:
+        totalXp: { type: integer }
+        level:
+          type: object
+          properties:
+            level: { type: integer }
+            xpIntoLevel: { type: integer }
+            xpForNext: { type: integer }
+            progress: { type: number }
+        streak: { $ref: "#/components/schemas/StreakState" }
+        minutesToday: { type: integer }
+        dailyGoalMinutes: { type: integer }
+    Course:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        title: { type: string }
+        subject: { type: string, enum: [math, reading, science] }
+        gradeBand: { type: string }
+        description: { type: string }
+        coverHue: { type: integer }
+        unitCount: { type: integer }
+        estimatedMinutes: { type: integer }
+    Unit:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        courseId: { type: string, format: uuid }
+        position: { type: integer }
+        title: { type: string }
+        summary: { type: string }
+        skills:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              unitId: { type: string, format: uuid }
+              code: { type: string, examples: [FR.3] }
+              name: { type: string }
+              prerequisiteIds: { type: array, items: { type: string, format: uuid } }
+    LessonBlock:
+      oneOf:
+        - { type: object, properties: { kind: { const: heading }, text: { type: string } } }
+        - { type: object, properties: { kind: { const: paragraph }, text: { type: string } } }
+        - type: object
+          properties:
+            kind: { const: callout }
+            tone: { enum: [tip, remember, try] }
+            text: { type: string }
+        - type: object
+          properties:
+            kind: { const: example }
+            prompt: { type: string }
+            steps: { type: array, items: { type: string } }
+            answer: { type: string }
+        - { type: object, properties: { kind: { const: check }, itemId: { type: string, format: uuid } } }
+      discriminator: { propertyName: kind }
+    Lesson:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        skillId: { type: string, format: uuid }
+        slug: { type: string }
+        title: { type: string }
+        level: { type: integer, minimum: 1, maximum: 5 }
+        estimatedMinutes: { type: integer }
+        blocks: { type: array, items: { $ref: "#/components/schemas/LessonBlock" } }
+    PublicItem:
+      type: object
+      description: A practice item without its answer key or explanation.
+      required: [id, skillId, kind, prompt, difficulty, hints]
+      properties:
+        id: { type: string, format: uuid }
+        skillId: { type: string, format: uuid }
+        kind: { type: string, enum: [multiple_choice, numeric, short_text, ordering] }
+        prompt: { type: string }
+        difficulty: { type: number }
+        hints: { type: array, items: { type: string } }
+        choices: { type: array, items: { type: object, properties: { id: { type: string }, text: { type: string } } } }
+        entries: { type: array, items: { type: object, properties: { id: { type: string }, text: { type: string } } } }
+        unit: { type: string }
+    Response:
+      oneOf:
+        - { type: object, required: [kind, choiceId], properties: { kind: { const: multiple_choice }, choiceId: { type: string } } }
+        - { type: object, required: [kind, value], properties: { kind: { const: numeric }, value: { type: number } } }
+        - { type: object, required: [kind, text], properties: { kind: { const: short_text }, text: { type: string, maxLength: 500 } } }
+        - { type: object, required: [kind, order], properties: { kind: { const: ordering }, order: { type: array, items: { type: string } } } }
+      discriminator: { propertyName: kind }
+    SkillMastery:
+      type: object
+      properties:
+        skillId: { type: string, format: uuid }
+        pKnown: { type: number, minimum: 0, maximum: 1 }
+        ability: { type: number }
+        band: { type: string, enum: [new, learning, practicing, mastered] }
+        attempts: { type: integer }
+        lastPracticedAt: { type: [string, "null"], format: date-time }
+        dueAt: { type: [string, "null"], format: date-time }
+    AttemptInput:
+      type: object
+      required: [itemId, response, durationMs]
+      properties:
+        itemId: { type: string, format: uuid }
+        sessionId: { type: [string, "null"], format: uuid }
+        response: { $ref: "#/components/schemas/Response" }
+        hintsUsed: { type: integer, minimum: 0, maximum: 5, default: 0 }
+        durationMs: { type: integer, minimum: 0 }
+        clientAttemptId:
+          type: string
+          format: uuid
+          description: Client-generated; retries with the same id return the original result.
+        answeredAt: { type: string, format: date-time }
+    AttemptResult:
+      type: object
+      properties:
+        attempt: { type: object }
+        correct: { type: boolean }
+        explanation: { type: string }
+        correctResponse: { $ref: "#/components/schemas/Response" }
+        mastery: { $ref: "#/components/schemas/SkillMastery" }
+        xpEarned: { type: integer }
+        encouragementKey:
+          type: string
+          enum: [correct_streak, correct_after_hint, correct_hard, correct, incorrect_close, incorrect_first, incorrect_again, mastered, level_up]
+    LearningSession:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        courseId: { type: string, format: uuid }
+        kind: { type: string, enum: [diagnostic, practice, review] }
+        startedAt: { type: string, format: date-time }
+        completedAt: { type: [string, "null"], format: date-time }
+        itemsAnswered: { type: integer }
+        itemsCorrect: { type: integer }
+    NextItemResponse:
+      type: object
+      properties:
+        session: { $ref: "#/components/schemas/LearningSession" }
+        item:
+          oneOf:
+            - { $ref: "#/components/schemas/PublicItem" }
+            - { type: "null" }
+        rationale: { type: string, examples: ["A little stretch — you're ready for it."] }
+        progress:
+          type: object
+          properties:
+            answered: { type: integer }
+            target: { type: integer }
+paths:
+  /healthz:
+    get:
+      tags: [ops]
+      summary: Liveness probe
+      security: []
+      responses:
+        "200": { description: The process is up }
+  /v1/auth/sign-up:
+    post:
+      tags: [auth]
+      summary: Create an account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, displayName]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 10, description: Letters and numbers. }
+                displayName: { type: string, maxLength: 60 }
+                role: { type: string, enum: [student, educator], default: student }
+                gradeBand: { type: [string, "null"] }
+      responses:
+        "201": { description: Signed up, content: { application/json: { schema: { $ref: "#/components/schemas/Session" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+  /v1/auth/sign-in:
+    post:
+      tags: [auth]
+      summary: Sign in with email and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [email, password], properties: { email: { type: string }, password: { type: string } } }
+      responses:
+        "200": { description: Signed in, content: { application/json: { schema: { $ref: "#/components/schemas/Session" } } } }
+        "401": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+  /v1/auth/refresh:
+    post:
+      tags: [auth]
+      summary: Exchange a refresh token for a new token pair
+      description: The presented token is consumed. Presenting it again revokes every token in its family.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [refreshToken], properties: { refreshToken: { type: string } } }
+      responses:
+        "200":
+          description: New tokens
+          content:
+            application/json:
+              schema: { type: object, properties: { accessToken: { type: string }, refreshToken: { type: string } } }
+        "401": { $ref: "#/components/responses/Error" }
+  /v1/auth/sign-out:
+    post:
+      tags: [auth]
+      summary: Revoke the session behind a refresh token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [refreshToken], properties: { refreshToken: { type: string } } }
+      responses:
+        "204": { description: Signed out (also when already signed out) }
+  /v1/me:
+    get:
+      tags: [auth]
+      summary: The signed-in learner, their preferences and progress
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user: { $ref: "#/components/schemas/User" }
+                  preferences: { $ref: "#/components/schemas/Preferences" }
+                  progress: { $ref: "#/components/schemas/ProgressSummary" }
+        "401": { $ref: "#/components/responses/Error" }
+  /v1/me/preferences:
+    patch:
+      tags: [auth]
+      summary: Update preferences (and display name or avatar colour)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - { $ref: "#/components/schemas/Preferences" }
+                - type: object
+                  properties:
+                    displayName: { type: string, maxLength: 60 }
+                    avatarColor: { type: string }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { type: object, properties: { preferences: { $ref: "#/components/schemas/Preferences" } } }
+        "400": { $ref: "#/components/responses/Error" }
+  /v1/courses:
+    get:
+      tags: [catalog]
+      summary: All published courses
+      security: []
+      responses:
+        "200":
+          description: Courses (cacheable)
+          content:
+            application/json:
+              schema: { type: object, properties: { courses: { type: array, items: { $ref: "#/components/schemas/Course" } } } }
+  /v1/courses/{slug}:
+    get:
+      tags: [catalog]
+      summary: A course outline with units and skills
+      security: []
+      parameters:
+        - { name: slug, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Course outline
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  course: { $ref: "#/components/schemas/Course" }
+                  units: { type: array, items: { $ref: "#/components/schemas/Unit" } }
+        "404": { $ref: "#/components/responses/Error" }
+  /v1/lessons/{id}:
+    get:
+      tags: [catalog]
+      summary: A lesson and the items its check blocks reference
+      description: Served with `Cache-Control` and an ETag; revalidate with `If-None-Match`.
+      security: []
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Lesson
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lesson: { $ref: "#/components/schemas/Lesson" }
+                  items: { type: array, items: { $ref: "#/components/schemas/PublicItem" } }
+        "304": { description: Not modified }
+        "404": { $ref: "#/components/responses/Error" }
+  /v1/skills/{id}/lessons:
+    get:
+      tags: [catalog]
+      summary: Lessons that teach a skill, gentlest first
+      security: []
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Lesson summaries }
+        "404": { $ref: "#/components/responses/Error" }
+  /v1/attempts:
+    post:
+      tags: [learning]
+      summary: Answer a practice item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AttemptInput" }
+      responses:
+        "200": { description: Scored, content: { application/json: { schema: { $ref: "#/components/schemas/AttemptResult" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /v1/sessions:
+    post:
+      tags: [learning]
+      summary: Start a diagnostic, practice or review session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [courseId, kind]
+              properties:
+                courseId: { type: string, format: uuid }
+                kind: { type: string, enum: [diagnostic, practice, review] }
+                targetItems: { type: integer, minimum: 3, maximum: 30 }
+      responses:
+        "201": { description: First item, content: { application/json: { schema: { $ref: "#/components/schemas/NextItemResponse" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /v1/sessions/{id}/next:
+    get:
+      tags: [learning]
+      summary: The next item the engine picked (null once the session target is reached)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Next item, content: { application/json: { schema: { $ref: "#/components/schemas/NextItemResponse" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /v1/sessions/{id}/complete:
+    post:
+      tags: [learning]
+      summary: Finish a session (idempotent); diagnostics return starting points
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Session summary }
+        "404": { $ref: "#/components/responses/Error" }
+  /v1/lessons/{id}/complete:
+    post:
+      tags: [progress]
+      summary: Record a finished lesson
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [durationMs], properties: { durationMs: { type: integer, minimum: 0 } } }
+      responses:
+        "200": { description: XP earned and the updated progress summary }
+  /v1/progress:
+    get:
+      tags: [progress]
+      summary: XP, level, streak, mastery and the last seven days
+      responses:
+        "200": { description: Progress overview }
+  /v1/courses/{slug}/mastery:
+    get:
+      tags: [progress]
+      summary: Mastery for every skill in a course
+      parameters:
+        - { name: slug, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Mastery
+          content:
+            application/json:
+              schema: { type: object, properties: { mastery: { type: array, items: { $ref: "#/components/schemas/SkillMastery" } } } }
+  /v1/recommendations:
+    get:
+      tags: [progress]
+      summary: What to do next, across courses
+      responses:
+        "200": { description: Up to four recommendations }
+
