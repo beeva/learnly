@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>Learnly app icon</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6E6EE3"/>
+      <stop offset="1" stop-color="#4747B8"/>
+    </linearGradient>
+    <linearGradient id="spark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FF9B7F"/>
+      <stop offset="1" stop-color="#FF7A59"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <!-- mastery ring: three quarters complete, the brand's "visible, earned progress" -->
+  <circle cx="512" cy="512" r="300" fill="none" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="72"/>
+  <path d="M512 212 A300 300 0 1 1 212 512" fill="none" stroke="#FBFAF7" stroke-width="72" stroke-linecap="round"/>
+  <!-- the "L" -->
+  <path d="M452 372 V612 H604" fill="none" stroke="#FBFAF7" stroke-width="64" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- coral spark where the ring ends -->
+  <circle cx="212" cy="512" r="58" fill="url(#spark)"/>
+  <path d="M212 476 L222 502 L248 512 L222 522 L212 548 L202 522 L176 512 L202 502 Z" fill="#FFFFFF"/>
+</svg>
