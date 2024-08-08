@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1284" height="2778" viewBox="0 0 1284 2778">
+  <title>Learnly splash</title>
+  <rect width="1284" height="2778" fill="#FBFAF7"/>
+  <g transform="translate(642 1250)">
+    <circle r="190" fill="none" stroke="#5B5BD6" stroke-opacity="0.14" stroke-width="44"/>
+    <path d="M0 -190 A190 190 0 1 1 -190 0" fill="none" stroke="#5B5BD6" stroke-width="44" stroke-linecap="round"/>
+    <path d="M-38 -88 V64 H58" fill="none" stroke="#5B5BD6" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="-190" cy="0" r="36" fill="#FF7A59"/>
+  </g>
+  <text x="642" y="1560" text-anchor="middle" font-family="Nunito, 'Nunito Sans', sans-serif" font-weight="800" font-size="104" fill="#1C1B29">Learnly</text>
+  <text x="642" y="1640" text-anchor="middle" font-family="Inter, sans-serif" font-weight="500" font-size="44" fill="#5E5C70">Learning that adapts to you</text>
+</svg>
