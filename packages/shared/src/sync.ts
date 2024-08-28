@@ -29,3 +29,19 @@ export const syncOperationSchema = z.discriminatedUnion("type", [
 export type SyncOperation = z.infer<typeof syncOperationSchema>;
 export type SyncOperationType = SyncOperation["type"];
 
+export const syncPushSchema = z.object({
+  deviceId: z.string().min(8).max(64),
+  /** Server cursor from the last successful pull, or null on first sync. */
+  since: z.string().nullable(),
+  operations: z.array(syncOperationSchema).max(200),
+});
+export type SyncPushInput = z.infer<typeof syncPushSchema>;
+
+export type SyncOpStatus = "applied" | "duplicate" | "rejected";
+
+export interface SyncOpResult {
+  opId: string;
+  status: SyncOpStatus;
+  reason?: string;
+}
+
