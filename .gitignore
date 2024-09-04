@@ -11,3 +11,11 @@ coverage/
 .pgdata/
 playwright-report/
 test-results/
+.expo/
+.expo-shared/
+ios/
+android/
+*.jks
+*.p8
+*.p12
+*.mobileprovision
