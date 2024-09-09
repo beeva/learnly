@@ -18,3 +18,9 @@ so it bundles cleanly into React Native.
 - `schemas.ts` — `zod` schemas for every request body the API accepts
 - `progress.ts` — XP, levels and forgiving streak rules
 - `i18n.ts` — encouragement copy keys and message formatting
+- `sync.ts` — offline operation envelope used by the mobile outbox and `POST /v1/sync`
+
+### Sync guarantees
+
+Every operation carries a client-generated `opId`. The server records applied ids,
+so replaying a batch after a dropped connection is always safe.
