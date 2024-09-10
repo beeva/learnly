@@ -9,3 +9,5 @@ export const MIGRATIONS: string[] = ["001_users_and_auth", "002_catalog", "003_a
 
 MIGRATIONS.push("004_sessions", "005_progress");
 
+MIGRATIONS.push("006_sync");
+
