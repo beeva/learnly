@@ -63,3 +63,14 @@ In mock mode the sign-in screen has one-tap demo buttons instead.
 - **Practice** uses multiple choice, numeric, short answer and ordering items, with hints,
   encouraging feedback and an XP reward for every effort.
 - **Progress** shows a level ring, a streak with a forgiving "freeze" and a mastery map for each unit.
+
+## Mobile and offline
+
+`apps/mobile` is an Expo (React Native) app for iOS and Android. It caches lessons
+and practice items in SQLite and records every answer in a local outbox.
+When the device is back online the outbox syncs through `POST /v1/sync`.
+Practice keeps adapting offline because the same `@learnly/adaptive-engine` runs on-device.
+
+```bash
+pnpm --filter @learnly/mobile start   # Expo dev server
+```
