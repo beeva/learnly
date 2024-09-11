@@ -34,3 +34,22 @@ POST /v1/attempts
 
 A diagnostic session rebuilds its state from the attempts already in the session,
 so the API stays stateless and a student can resume on a different device.
+
+## Offline sync
+
+```
+Device                                   API
+──────                                   ───
+write → SQLite + outbox(opId)
+NetInfo online ─────── POST /v1/sync ──▶ for each op (tx):
+                                           INSERT sync_operations(user, op_id) ON CONFLICT DO NOTHING
+                                           if inserted → apply op
+                       ◀── results + cursor + deltas since `since`
+apply deltas, drop acked ops
+```
+
+- Operations are **idempotent** by `(user_id, op_id)`, so retries are always safe.
+- Attempts made offline keep their original `answeredAt`. The server re-applies them in
+  timestamp order, so mastery comes out the same as if they had been made online.
+- The device shows its own optimistic mastery right away, and the server's authoritative
+  values replace it on the next pull.
