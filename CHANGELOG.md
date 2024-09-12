@@ -17,3 +17,11 @@ All notable changes to Learnly are listed here, oldest release first.
 - Adaptive practice for all four item types, with hints and encouraging feedback
 - XP, levels and streaks (with a one-day freeze)
 - Progress page and home recommendations
+
+## 0.3.0 — 2024-10-29
+
+- iOS and Android app (Expo)
+- Offline-first: lessons downloaded to SQLite, answers queued in an outbox
+- `POST /v1/sync` with idempotent operations and delta pulls
+- On-device item selection while offline
+- Web: installable PWA with offline lesson caching
