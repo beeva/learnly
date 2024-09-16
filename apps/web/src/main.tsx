@@ -80,3 +80,12 @@ boot.push(
   }),
 );
 
+boot.push(
+  Promise.all([import("./offline/sync"), import("./offline/OfflineBanner"), import("./app/AppShell")]).then(
+    ([offline, { OfflineBanner }, { registerShellSlot }]) => {
+      offline.installOfflineSupport(queryClient, { serviceWorker: !useMockApi });
+      registerShellSlot("banner", OfflineBanner);
+    },
+  ),
+);
+
