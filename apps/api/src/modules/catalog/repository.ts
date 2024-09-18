@@ -282,3 +282,36 @@ export class PgCatalogRepository implements CatalogRepository {
   }
 }
 
+/** What offline clients need to keep their lesson cache fresh. */
+export interface CatalogChangeFeed {
+  lessonsChangedSince(since: string | null): Promise<Lesson[]>;
+  lessonsDeletedSince(since: string): Promise<LessonId[]>;
+}
+
+export class PgCatalogChangeFeed implements CatalogChangeFeed {
+  constructor(private readonly db: Database) {}
+
+  async lessonsChangedSince(since: string | null): Promise<Lesson[]> {
+    const rows = await this.db.query<LessonRow>(
+      `select ${LESSON_COLUMNS} from lessons
+        where $1::timestamptz is null or updated_at > $1::timestamptz
+        order by updated_at
+        limit 500`,
+      [since],
+    );
+    return rows.map(toLesson);
+  }
+
+  async lessonsDeletedSince(since: string): Promise<LessonId[]> {
+    const rows = await this.db.query<{ entity_id: LessonId }>(
+      `select t.entity_id from catalog_tombstones t
+        where t.entity = 'lesson' and t.deleted_at > $1
+          -- a lesson deleted and later restored is live again
+          and not exists (select 1 from lessons l where l.id = t.entity_id)
+        order by t.deleted_at`,
+      [since],
+    );
+    return rows.map((row) => row.entity_id);
+  }
+}
+
