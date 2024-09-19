@@ -93,3 +93,7 @@ import { sessionsModule } from "./modules/sessions/index.js";
 // the whole pipeline to award XP and pick encouragement.
 featureModules.push(sessionsModule, progressModule);
 
+import { syncModule } from "./modules/sync/index.js";
+
+featureModules.push(syncModule);
+
