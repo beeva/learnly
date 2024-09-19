@@ -541,3 +541,83 @@ installers.push((container, store) => {
     .register("progressRepository", () => store.progress);
 });
 
+import type { CatalogChangeFeed } from "../../src/modules/catalog/repository.js";
+import type { OperationRecord, OperationRef, SyncRepository } from "../../src/modules/sync/repository.js";
+
+export class MemorySync implements SyncRepository {
+  readonly operations = new Map<string, OperationRecord & OperationRef>();
+  readonly devices = new Map<string, string>();
+
+  constructor(private readonly mastery: MemoryMastery) {}
+
+  async claim(userId: UserId, op: OperationRef): Promise<boolean> {
+    const key = `${userId}:${op.opId}`;
+    if (this.operations.has(key)) return false;
+    this.operations.set(key, { ...op, status: "applied", reason: null });
+    return true;
+  }
+
+  async find(userId: UserId, opId: string): Promise<OperationRecord | null> {
+    const row = this.operations.get(`${userId}:${opId}`);
+    return row ? { status: row.status, reason: row.reason } : null;
+  }
+
+  async reject(userId: UserId, op: OperationRef, reason: string): Promise<void> {
+    const key = `${userId}:${op.opId}`;
+    // Without a real transaction the failed claim is still here; a rollback would have removed it.
+    this.operations.set(key, { ...op, status: "rejected", reason });
+  }
+
+  async touchDevice(userId: UserId, deviceId: string, at: string): Promise<void> {
+    this.devices.set(`${userId}:${deviceId}`, at);
+  }
+
+  async masteryChangedSince(userId: UserId, since: string | null): Promise<SkillMastery[]> {
+    return this.mastery.changedSince(userId, since);
+  }
+}
+
+/** Seeded lessons count as published at this time. */
+export const CATALOG_PUBLISHED_AT = "2024-01-01T00:00:00.000Z";
+
+export class MemoryChangeFeed implements CatalogChangeFeed {
+  readonly updatedAt = new Map<LessonId, string>();
+  readonly tombstones = new Map<LessonId, string>();
+
+  constructor(private readonly catalog: MemoryCatalog) {}
+
+  async lessonsChangedSince(since: string | null): Promise<Lesson[]> {
+    const lessons = await Promise.all([...this.catalog.lessons.keys()].map((id) => this.catalog.findLesson(id)));
+    return lessons.filter((lesson): lesson is Lesson => {
+      if (!lesson) return false;
+      const changed = this.updatedAt.get(lesson.id) ?? CATALOG_PUBLISHED_AT;
+      return since === null || Date.parse(changed) > Date.parse(since);
+    });
+  }
+
+  async lessonsDeletedSince(since: string): Promise<LessonId[]> {
+    return [...this.tombstones.entries()].filter(([, at]) => Date.parse(at) > Date.parse(since)).map(([id]) => id);
+  }
+
+  /** Test helpers mirroring authoring changes. */
+  touchLesson(id: LessonId, at: string): void {
+    this.updatedAt.set(id, at);
+  }
+
+  deleteLesson(id: LessonId, at: string): void {
+    this.catalog.lessons.delete(id);
+    this.tombstones.set(id, at);
+  }
+}
+
+export interface MemoryStore {
+  sync: MemorySync;
+  changes: MemoryChangeFeed;
+}
+
+installers.push((container, store) => {
+  store.sync = new MemorySync(store.mastery);
+  store.changes = new MemoryChangeFeed(store.catalog);
+  container.register("syncRepository", () => store.sync).register("catalogChangeFeed", () => store.changes);
+});
+
