@@ -88,3 +88,19 @@ Sessions are stateless on the server: the next item is recomputed from the answe
 `GET /v1/recommendations` turns mastery, lesson completions and recent pace into
 "what next": a lesson at the right level, practice, a review, or the diagnostic.
 
+
+## Offline sync
+
+The mobile app records every write in a local outbox and pushes it with `POST /v1/sync`.
+
+- Each operation is applied **in its own transaction together with its row in
+  `sync_operations`** (primary key `(user_id, op_id)`), so it is applied exactly once no
+  matter how many times a flaky connection retries the batch.
+- Operations are applied in the order they happened on the device; offline answers keep
+  their original `answeredAt`, and a late answer from yesterday never breaks today's streak.
+- Business rejections (an item that no longer exists, a finished session) are recorded and
+  returned as `rejected` with a reason — on every retry. Server errors fail the request so
+  the client retries later.
+- The response carries deltas since the client's cursor (a server timestamp): changed
+  mastery, changed lessons, and deleted lessons (from `catalog_tombstones`).
+
