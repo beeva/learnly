@@ -494,3 +494,68 @@ paths:
       responses:
         "200": { description: Up to four recommendations }
 
+  /v1/sync:
+    post:
+      tags: [sync]
+      summary: Push the offline outbox and pull deltas
+      description: |
+        Operations are applied in `createdAt` order, each in its own transaction, keyed by
+        `(user, opId)`. Retrying a batch is always safe: already-applied operations come
+        back as `duplicate`. `cursor` is a server timestamp; send it as `since` next time.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deviceId, since, operations]
+              properties:
+                deviceId: { type: string, minLength: 8, maxLength: 64 }
+                since: { type: [string, "null"] }
+                operations:
+                  type: array
+                  maxItems: 200
+                  items:
+                    type: object
+                    required: [opId, type, createdAt, payload]
+                    properties:
+                      opId: { type: string, format: uuid }
+                      type: { type: string, enum: [attempt.create, lesson.complete, preferences.update] }
+                      createdAt: { type: string, format: date-time }
+                      payload: { type: object }
+      responses:
+        "200":
+          description: Per-operation results and deltas since the cursor
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        opId: { type: string }
+                        status: { type: string, enum: [applied, duplicate, rejected] }
+                        reason: { type: string }
+                  cursor: { type: string, format: date-time }
+                  serverTime: { type: string, format: date-time }
+                  mastery:
+                    type: object
+                    properties:
+                      upserted: { type: array, items: { $ref: "#/components/schemas/SkillMastery" } }
+                      deletedIds: { type: array, items: { type: string } }
+                  lessons:
+                    type: object
+                    properties:
+                      upserted: { type: array, items: { $ref: "#/components/schemas/Lesson" } }
+                      deletedIds: { type: array, items: { type: string, format: uuid } }
+                  progress:
+                    type: object
+                    properties:
+                      totalXp: { type: integer }
+                      streak: { type: integer }
+                      freezesAvailable: { type: integer }
+        "400": { $ref: "#/components/responses/Error" }
+
