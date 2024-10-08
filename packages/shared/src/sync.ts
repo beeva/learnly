@@ -45,3 +45,17 @@ export interface SyncOpResult {
   reason?: string;
 }
 
+export interface SyncDelta<T> {
+  upserted: T[];
+  deletedIds: string[];
+}
+
+export interface SyncResponse {
+  results: SyncOpResult[];
+  cursor: string;
+  serverTime: string;
+  mastery: SyncDelta<import("./domain.js").SkillMastery>;
+  lessons: SyncDelta<import("./domain.js").Lesson>;
+  progress: { totalXp: number; streak: number; freezesAvailable: number };
+}
+
