@@ -59,3 +59,10 @@ export interface SyncResponse {
   progress: { totalXp: number; streak: number; freezesAvailable: number };
 }
 
+/** Exponential backoff with full jitter, capped at five minutes. */
+export function syncBackoffMs(failures: number, random: () => number = Math.random): number {
+  const cap = 5 * 60_000;
+  const base = Math.min(cap, 1000 * 2 ** Math.max(0, failures));
+  return Math.round(base * (0.5 + random() * 0.5));
+}
+
