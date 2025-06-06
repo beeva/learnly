@@ -1,0 +1,5 @@
+# Default reviewers
+*                               @beeva-studio/learnly
+/packages/adaptive-engine/      @beeva-studio/learnly-learning-science
+/apps/api/migrations/           @beeva-studio/learnly-backend
+/infra/                         @beeva-studio/learnly-platform
