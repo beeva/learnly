@@ -25,3 +25,9 @@ All notable changes to Learnly are listed here, oldest release first.
 - `POST /v1/sync` with idempotent operations and delta pulls
 - On-device item selection while offline
 - Web: installable PWA with offline lesson caching
+
+## 1.0.0 — 2025-06-27
+
+- Educator classrooms with join codes
+- Class insights: completion, struggle hotspots and common misconceptions
+- CSV export
