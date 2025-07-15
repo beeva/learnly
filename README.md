@@ -74,3 +74,22 @@ Practice keeps adapting offline because the same `@learnly/adaptive-engine` runs
 ```bash
 pnpm --filter @learnly/mobile start   # Expo dev server
 ```
+
+## For educators
+
+Teachers create a classroom, share a six-character join code, and get:
+
+- completion and time-on-task for the whole class
+- **struggle hotspots**: the skills with the highest error rates and the most common misconception for each
+- a mastery heatmap of students × skills
+- a "needs attention" list for students whose activity or accuracy has dropped
+- CSV export for gradebooks
+
+## Results
+
+| | |
+|---|---|
+| **3×** | course completion compared with the fixed path |
+| **4.9★** | student rating in in-app surveys |
+| **3** | platforms: web, iOS and Android |
+| **< 2s** | lesson load on any device |
