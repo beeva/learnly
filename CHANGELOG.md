@@ -31,3 +31,9 @@ All notable changes to Learnly are listed here, oldest release first.
 - Educator classrooms with join codes
 - Class insights: completion, struggle hotspots and common misconceptions
 - CSV export
+
+## 1.1.0 — 2025-08-15
+
+- Mastery heatmap for educators
+- Spanish and Filipino translations
+- Streak reminder notifications on mobile, with quiet hours
