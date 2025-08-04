@@ -23,3 +23,20 @@ import { applyAttempt, selectNextItem } from "@learnly/adaptive-engine";
 
 const next = selectNextItem(candidates, masteryBySkill, { recentItemIds });
 ```
+
+## Engine v2
+
+v2 adds Bayesian Knowledge Tracing for mastery and a spaced-repetition review
+schedule. See [docs/engine-v2.md](docs/engine-v2.md) for the design and the
+simulation results.
+
+| Module | Purpose |
+|---|---|
+| `irt.ts` | Rasch probability, ability updates, nightly difficulty calibration |
+| `mastery.ts` | Mastery bands and forgetting decay |
+| `select.ts` | Next-item selection and adaptive success targets |
+| `diagnostic.ts` | Short adaptive placement diagnostic |
+| `pacing.ts` | Lesson pacing and rapid-guessing detection |
+| `bkt.ts` | Knowledge tracing and per-skill parameter fitting |
+| `spaced.ts` | Review intervals and due-skill ranking |
+| `v2.ts` | `applyAttemptV2`, combining all of the above |
