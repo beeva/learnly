@@ -53,3 +53,17 @@ apply deltas, drop acked ops
   timestamp order, so mastery comes out the same as if they had been made online.
 - The device shows its own optimistic mastery right away, and the server's authoritative
   values replace it on the next pull.
+
+## Educator insights
+
+Insights are computed from `attempts` joined to `classroom_members` over a time window
+(default: last 14 days):
+
+- **Error rate per skill** = incorrect / total attempts. A skill becomes a hotspot when its
+  error rate is ≥ 35% and at least 3 students are struggling.
+- **Common misconception** = the most frequent wrong response, reported only when it
+  accounts for ≥ 30% of wrong answers.
+- **Needs attention**: no activity for 5+ days, or accuracy down more than 20 points week over week.
+
+Analytics events (`POST /v1/events`) are batched by the clients and written to an
+append-only `analytics_events` table, partitioned by month.
