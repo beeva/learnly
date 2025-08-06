@@ -285,3 +285,10 @@ export const syncApi = {
   push: (input: SyncPushInput) => request<SyncResponse>("/v1/sync", { method: "POST", body: input }),
 };
 
+export type JoinedClassroom = import("@learnly/shared").Classroom;
+
+export const classroomApi = {
+  join: (joinCode: string) =>
+    request<{ classroom: JoinedClassroom }>("/v1/classrooms/join", { method: "POST", body: { joinCode } }),
+};
+
