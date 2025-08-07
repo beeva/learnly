@@ -258,3 +258,73 @@ export async function unconfirmedLessonMinutes(sinceIso: string): Promise<number
   }, 0);
 }
 
+export interface DeadLetter {
+  opId: string;
+  type: SyncOperation["type"];
+  createdAt: string;
+  reason: string;
+  deadAt: string;
+  meta: OutboxMeta | null;
+}
+
+/** Moves operations out of the retry loop without deleting the learner's work. */
+export async function moveToDeadLetter(opIds: string[], reason: string, now = new Date()): Promise<void> {
+  if (opIds.length === 0) return;
+  const db = await getDb();
+  await db.runAsync(
+    `UPDATE outbox SET state = 'dead', dead_reason = ?, dead_at = ? WHERE op_id IN (${opIds.map(() => "?").join(",")})`,
+    reason,
+    now.toISOString(),
+    ...opIds,
+  );
+  notify({ type: "changed" });
+}
+
+export async function listDeadLetters(): Promise<DeadLetter[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<{
+    op_json: string;
+    meta_json: string | null;
+    dead_reason: string | null;
+    last_error: string | null;
+    dead_at: string | null;
+    created_at: string;
+  }>(
+    "SELECT op_json, meta_json, dead_reason, last_error, dead_at, created_at FROM outbox WHERE state IN ('dead', 'rejected') ORDER BY seq DESC",
+  );
+  return rows.map((r) => {
+    const op = JSON.parse(r.op_json) as SyncOperation;
+    return {
+      opId: op.opId,
+      type: op.type,
+      createdAt: r.created_at,
+      reason: r.dead_reason ?? r.last_error ?? "rejected",
+      deadAt: r.dead_at ?? r.created_at,
+      meta: r.meta_json ? (JSON.parse(r.meta_json) as OutboxMeta) : null,
+    };
+  });
+}
+
+/**
+ * Retrying re-stamps `createdAt` so an expired operation gets a fresh retention
+ * window; the opId is kept, so the server still dedupes if it had applied it.
+ */
+export async function retryDeadLetter(opId: string, now = new Date()): Promise<void> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ op_json: string }>("SELECT op_json FROM outbox WHERE op_id = ?", opId);
+  if (!row) return;
+  const op = { ...(JSON.parse(row.op_json) as SyncOperation), createdAt: now.toISOString() } as SyncOperation;
+  await db.runAsync(
+    "UPDATE outbox SET state = 'pending', op_json = ?, tries = 0, dead_reason = NULL, dead_at = NULL, last_error = NULL WHERE op_id = ?",
+    JSON.stringify(op),
+    opId,
+  );
+  notify({ type: "changed" });
+}
+
+export async function discardDeadLetter(opId: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync("DELETE FROM outbox WHERE op_id = ? AND state IN ('dead', 'rejected')", opId);
+  notify({ type: "changed" });
+}
+
