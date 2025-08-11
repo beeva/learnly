@@ -135,3 +135,18 @@ export default function RootLayout() {
   );
 }
 
+import { analytics } from "../src/analytics/analytics";
+import { initI18n } from "../src/i18n/locales";
+import { bootReminders, configureReminderHandler } from "../src/notifications/reminders";
+import { installWarmup } from "../src/perf/warmup";
+import { installSyncHardening } from "../src/sync/hardening";
+
+// Module scope on purpose: these run once per JS bundle load, before the first render,
+// so the first screen already speaks the learner's language.
+configureReminderHandler();
+void initI18n();
+installSyncHardening();
+installWarmup();
+analytics.start();
+bootReminders();
+
