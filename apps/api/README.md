@@ -104,3 +104,35 @@ The mobile app records every write in a local outbox and pushes it with `POST /v
 - The response carries deltas since the client's cursor (a server timestamp): changed
   mastery, changed lessons, and deleted lessons (from `catalog_tombstones`).
 
+
+## Engine v2
+
+With `ENGINE_VERSION=v2` (the default) mastery uses Bayesian Knowledge Tracing:
+
+- `pKnown` comes from BKT, with guess rates adjusted per item kind (1/k for k choices),
+  while the Rasch ability still drives item difficulty;
+- every answer reschedules the skill's next review (`skill_review_state`, SM-2 style), and
+  review sessions pull what is due with `dueForReview`;
+- slip/guess/transit are **fitted per skill every night** from all learners' answer
+  sequences (`src/jobs/bkt-fit.ts`), and item difficulties are re-calibrated from first
+  attempts using the learner's ability at the time (`src/jobs/calibrate-difficulty.ts`,
+  bounded to ±1.5 logits from the author's estimate).
+
+Nightly jobs run at `NIGHTLY_JOBS_HOUR_UTC` on whichever replica claims them first (a partial
+unique index on `job_runs` guarantees one running instance). Run them by hand with
+`pnpm --filter @learnly/api job [bkt-fit|calibrate-difficulty|retention] [--force]`.
+
+## Educator insights
+
+`GET /v1/classrooms/:id/insights` answers "where are my students struggling?":
+
+- **hotspots** — skills ranked by error rate (≥ 5 attempts), how many students are
+  struggling, and the **most common wrong answer** when it clearly dominates
+  (≥ 30% of misses) — e.g. “2/8” for “What is 1/4 + 1/4?”;
+- **students** — weekly minutes, streak, mastered skills and a deliberately explainable
+  `needsAttention` flag: inactive 5+ days, under 50% accuracy over 8+ answers, rapid
+  guessing, or stuck on two skills;
+- a student × skill **heatmap** and a **CSV export** (formula-injection safe, audited).
+
+Only a classroom's own educator (or an admin) can see its data; anyone else gets a 404.
+
