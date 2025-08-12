@@ -559,3 +559,113 @@ paths:
                       freezesAvailable: { type: integer }
         "400": { $ref: "#/components/responses/Error" }
 
+  /v1/classrooms:
+    get:
+      tags: [educator]
+      summary: Classrooms you teach (educators) or have joined (students)
+      responses:
+        "200": { description: Classrooms }
+    post:
+      tags: [educator]
+      summary: Create a classroom (educators)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, courseId]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 80 }
+                courseId: { type: string, format: uuid }
+      responses:
+        "201": { description: Created with a 6-character join code }
+        "403": { $ref: "#/components/responses/Error" }
+  /v1/classrooms/join:
+    post:
+      tags: [educator]
+      summary: Join a classroom with its code (students)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [joinCode]
+              properties:
+                joinCode: { type: string, pattern: "^[A-HJ-NP-Za-hj-np-z2-9]{6}$" }
+      responses:
+        "200": { description: Joined (idempotent) }
+        "404": { $ref: "#/components/responses/Error" }
+  /v1/classrooms/{id}/members:
+    get:
+      tags: [educator]
+      summary: Students in a classroom
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Members }
+        "404": { $ref: "#/components/responses/Error" }
+  /v1/classrooms/{id}/insights:
+    get:
+      tags: [educator]
+      summary: Where students struggle, for a date window (default last 7 days, max 90)
+      parameters:
+        - { $ref: "#/components/parameters/Id" }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+      responses:
+        "200":
+          description: Classroom insights
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  classroomId: { type: string }
+                  generatedAt: { type: string, format: date-time }
+                  window: { type: object, properties: { from: { type: string }, to: { type: string } } }
+                  completionRate: { type: number }
+                  averageMinutesPerStudent: { type: number }
+                  masteryDistribution:
+                    type: object
+                    properties: { new: { type: integer }, learning: { type: integer }, practicing: { type: integer }, mastered: { type: integer } }
+                  hotspots:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        skillId: { type: string }
+                        skillName: { type: string }
+                        unitTitle: { type: string }
+                        errorRate: { type: number }
+                        studentsStruggling: { type: integer }
+                        commonMisconception: { type: [string, "null"] }
+                  students:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        userId: { type: string }
+                        displayName: { type: string }
+                        minutesThisWeek: { type: integer }
+                        streak: { type: integer }
+                        masteredSkills: { type: integer }
+                        needsAttention: { type: boolean }
+                        lastActiveAt: { type: [string, "null"] }
+        "400": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /v1/classrooms/{id}/heatmap:
+    get:
+      tags: [educator]
+      summary: Student × skill mastery grid
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Heatmap }
+  /v1/classrooms/{id}/export.csv:
+    get:
+      tags: [educator]
+      summary: Download the classroom as CSV (audited)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: CSV, content: { text/csv: { schema: { type: string } } } }
+
