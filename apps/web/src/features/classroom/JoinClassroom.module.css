@@ -1,0 +1,197 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-8);
+  padding-top: var(--space-6);
+}
+
+.page > div {
+  width: min(520px, 100%);
+}
+
+.card,
+.success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+}
+
+.icon,
+.successIcon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
+}
+
+.successIcon {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--color-success);
+  color: #fff;
+  box-shadow: 0 0 0 10px var(--color-success-soft);
+}
+
+.title,
+.successTitle {
+  font-size: var(--text-2xl);
+}
+
+.lead,
+.successBody {
+  max-width: 40ch;
+  color: var(--color-text-muted);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  margin-top: var(--space-4);
+}
+
+.codeField {
+  position: relative;
+}
+
+.codeInput {
+  width: 100%;
+  min-height: 76px;
+  padding: 0 var(--space-4) 10px;
+  border: 2px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  font-family: var(--font-mono);
+  font-size: clamp(1.6rem, 6vw, 2.25rem);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.4em;
+  text-indent: 0.4em;
+  text-align: center;
+  text-transform: uppercase;
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+
+.codeInput::placeholder {
+  color: var(--color-border-strong);
+}
+
+.codeInput:focus-visible {
+  border-color: var(--color-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 4px var(--color-primary-soft-strong);
+}
+
+.codeInputInvalid,
+.codeInputInvalid:focus-visible {
+  border-color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger-soft) 40%, var(--color-surface));
+}
+
+.slots {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  display: flex;
+  gap: 8px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.slot {
+  width: 22px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--color-border);
+  transition: background-color var(--duration-base) var(--ease-out), width var(--duration-base) var(--ease-out);
+}
+
+.slotFilled {
+  background: var(--color-primary);
+}
+
+.slotCurrent {
+  width: 30px;
+  background: var(--color-accent);
+}
+
+.hint {
+  font-size: var(--text-sm);
+  color: var(--color-text-subtle);
+}
+
+.error {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-danger-text);
+}
+
+.demo {
+  width: 100%;
+  margin-top: var(--space-3);
+  text-align: left;
+}
+
+.successActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.mine {
+  width: min(520px, 100%);
+}
+
+.mineTitle {
+  margin-bottom: var(--space-3);
+  font-size: var(--text-lg);
+}
+
+.mineList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mineItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.mineIcon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
+}
+
+.mineName {
+  flex: 1;
+  font-weight: var(--weight-semibold);
+  text-align: left;
+}
+
+@media (max-width: 420px) {
+  .codeInput {
+    letter-spacing: 0.25em;
+    text-indent: 0.25em;
+  }
+}
