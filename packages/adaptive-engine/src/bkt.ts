@@ -29,3 +29,19 @@ export function bktUpdate(pKnown: number, correct: boolean, params: BktParams = 
   return posterior + (1 - posterior) * pTransit;
 }
 
+/** Multiple-choice items with k options can be guessed with probability ~1/k. */
+export function paramsForItem(
+  base: BktParams,
+  kind: "multiple_choice" | "numeric" | "short_text" | "ordering",
+  choiceCount = 4,
+): BktParams {
+  switch (kind) {
+    case "multiple_choice":
+      return { ...base, pGuess: Math.min(0.5, 1 / Math.max(2, choiceCount)) };
+    case "ordering":
+      return { ...base, pGuess: 0.08 };
+    default:
+      return { ...base, pGuess: 0.05 };
+  }
+}
+
