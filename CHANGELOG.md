@@ -37,3 +37,9 @@ All notable changes to Learnly are listed here, oldest release first.
 - Mastery heatmap for educators
 - Spanish and Filipino translations
 - Streak reminder notifications on mobile, with quiet hours
+
+## 1.2.0 — 2025-10-24
+
+- Adaptive engine v2 (knowledge tracing and spaced review), rolled out at 10%, then 50%, then 100%
+- Review sessions for skills that are due
+- Nightly calibration of item difficulty
