@@ -23,3 +23,14 @@ export function nextReview(state: ReviewState, quality: 0 | 1 | 2 | 3 | 4 | 5): 
   return { intervalDays: Math.min(intervalDays, 60), ease, repetitions };
 }
 
+export function qualityFromAttempt(correct: boolean, hintsUsed: number, durationMs: number): 0 | 1 | 2 | 3 | 4 | 5 {
+  if (!correct) return hintsUsed > 0 ? 1 : 2;
+  if (hintsUsed > 1) return 3;
+  if (hintsUsed === 1 || durationMs > 90_000) return 4;
+  return 5;
+}
+
+export function dueAtFrom(answeredAt: string, review: ReviewState): string {
+  return new Date(Date.parse(answeredAt) + review.intervalDays * 86_400_000).toISOString();
+}
+
