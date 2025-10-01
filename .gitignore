@@ -19,3 +19,8 @@ android/
 *.p8
 *.p12
 *.mobileprovision
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl.bak
+.eslintcache
