@@ -42,3 +42,28 @@ export function updateAbility(
   return { ability: next, expected, surprise };
 }
 
+/**
+ * Re-calibrates an item's difficulty from logged responses using a few Newton
+ * iterations of the Rasch likelihood, with a weak prior toward the authored value
+ * so a handful of responses can't swing a new item wildly.
+ */
+export function calibrateDifficulty(
+  authored: number,
+  responses: { ability: number; correct: boolean }[],
+  priorWeight = 4,
+): number {
+  let b = authored;
+  for (let iter = 0; iter < 20; iter++) {
+    let gradient = (authored - b) * (1 / priorWeight);
+    let hessian = -1 / priorWeight;
+    for (const r of responses) {
+      const p = probabilityCorrect(r.ability, b);
+      gradient += p - (r.correct ? 1 : 0);
+      hessian -= p * (1 - p);
+    }
+    const step = gradient / hessian;
+    b = clamp(b - step, -4, 4);
+    if (Math.abs(step) < 1e-4) break;
+  }
+  return b;
+}
