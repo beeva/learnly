@@ -28,3 +28,21 @@ config.test = {
   restoreMocks: true,
 };
 
+config.build = {
+  target: "es2022",
+  sourcemap: true,
+  reportCompressedSize: false,
+  rollupOptions: {
+    output: {
+      manualChunks(id) {
+        if (!id.includes("node_modules")) return undefined;
+        if (/recharts|d3-|victory-vendor/.test(id)) return "charts";
+        if (id.includes("framer-motion")) return "motion";
+        if (/react-router|@remix-run/.test(id)) return "router";
+        if (/react-dom|scheduler|[\\/]react[\\/]/.test(id)) return "react";
+        if (id.includes("@tanstack")) return "query";
+        return undefined;
+      },
+    },
+  },
+};
