@@ -56,3 +56,16 @@ export function applyAttempt(state: SkillMastery, evidence: AttemptEvidence): Sk
   };
 }
 
+/**
+ * Memory fades. Without practice, we slowly pull pKnown toward the band below so the
+ * scheduler surfaces the skill again — but never below the learner's demonstrated
+ * floor, so a returning student isn't sent back to square one.
+ */
+export function decayedPKnown(state: SkillMastery, now: Date, halfLifeDays = 21): number {
+  if (!state.lastPracticedAt) return state.pKnown;
+  const days = (now.getTime() - Date.parse(state.lastPracticedAt)) / 86_400_000;
+  if (days <= 0) return state.pKnown;
+  const floor = Math.min(state.pKnown, BAND_THRESHOLDS.learning);
+  const retained = Math.pow(0.5, days / halfLifeDays);
+  return floor + (state.pKnown - floor) * retained;
+}
