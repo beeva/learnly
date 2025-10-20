@@ -199,3 +199,20 @@ export interface DiagnosticSummary {
   recommendedLessonId: LessonId | null;
 }
 
+export interface Classroom {
+  id: ClassroomId;
+  name: string;
+  educatorId: UserId;
+  courseId: CourseId;
+  joinCode: string;
+  studentCount: number;
+  createdAt: string;
+}
+
+export interface ClassroomMember {
+  classroomId: ClassroomId;
+  userId: UserId;
+  displayName: string;
+  avatarColor: string;
+  joinedAt: string;
+}
