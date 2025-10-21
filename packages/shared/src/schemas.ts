@@ -70,3 +70,15 @@ export const preferencesSchema = z.object({
 });
 export type PreferencesInput = z.infer<typeof preferencesSchema>;
 
+export const createClassroomSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  courseId: z.string().uuid(),
+});
+
+export const joinClassroomSchema = z.object({
+  joinCode: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-HJ-NP-Z2-9]{6}$/, "Join codes are 6 letters or numbers"),
+});
