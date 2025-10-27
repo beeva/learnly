@@ -293,3 +293,44 @@
   }
 }
 
+/*
+ * WCAG 2.2 AA pass: users who ask the OS for more contrast get stronger borders,
+ * darker muted text and a thicker focus ring. Windows High Contrast users get
+ * system colours so nothing important is conveyed by our palette alone.
+ */
+@media (prefers-contrast: more) {
+  :root {
+    --color-border: var(--palette-ink-500);
+    --color-border-strong: var(--palette-ink-700);
+    --color-text-muted: var(--palette-ink-800);
+    --color-text-subtle: var(--palette-ink-700);
+    --color-primary: var(--palette-indigo-700);
+    --color-primary-text: var(--palette-indigo-800);
+    --color-accent-text: #9c3018;
+    --focus-ring: 0 0 0 2px var(--color-bg), 0 0 0 5px var(--palette-ink-900);
+  }
+
+  :root[data-theme="dark"] {
+    --color-border: #6f6e85;
+    --color-border-strong: #9796aa;
+    --color-text-muted: #e2e1e8;
+    --color-text-subtle: #c2c1cf;
+    --color-primary: #b3b3f8;
+    --focus-ring: 0 0 0 2px var(--color-bg), 0 0 0 5px #ffffff;
+  }
+}
+
+@media (forced-colors: active) {
+  :root {
+    --focus-ring: 0 0 0 3px CanvasText;
+    --mastery-new: Canvas;
+    --mastery-learning: Mark;
+    --mastery-practicing: Highlight;
+    --mastery-mastered: LinkText;
+  }
+}
+
+:root {
+  /* Minimum interactive target per WCAG 2.2 (2.5.8): 24px; we aim for 44px on touch. */
+  --target-min: 44px;
+}
