@@ -32,3 +32,15 @@ describe("updateAbility", () => {
     expect(kFactor(1000)).toBe(0.15);
   });
 });
+import { calibrateDifficulty } from "../src/irt.js";
+
+describe("calibrateDifficulty", () => {
+  it("stays at the authored value with no responses", () => {
+    expect(calibrateDifficulty(0.4, [])).toBeCloseTo(0.4);
+  });
+
+  it("raises difficulty when capable learners keep missing", () => {
+    const responses = Array.from({ length: 40 }, () => ({ ability: 1, correct: false }));
+    expect(calibrateDifficulty(0, responses)).toBeGreaterThan(1);
+  });
+});
