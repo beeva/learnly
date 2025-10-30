@@ -24,3 +24,9 @@ so it bundles cleanly into React Native.
 
 Every operation carries a client-generated `opId`. The server records applied ids,
 so replaying a batch after a dropped connection is always safe.
+- `insights.ts` — educator insight shapes (struggle hotspots, class mastery heatmap)
+
+### Locales
+
+`en`, `es` and `fil` are supported. Use `resolveLocale()` to map a browser or device
+locale (e.g. `es-MX`) to a supported one.
