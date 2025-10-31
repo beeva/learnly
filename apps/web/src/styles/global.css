@@ -237,3 +237,57 @@ kbd {
   scroll-behavior: auto !important;
 }
 
+.skip-link {
+  position: fixed;
+  top: var(--space-3);
+  left: var(--space-3);
+  z-index: calc(var(--z-toast) + 1);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-pill);
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-family: var(--font-display);
+  font-weight: var(--weight-black);
+  text-decoration: none;
+  box-shadow: var(--shadow-lg);
+  transform: translateY(calc(-100% - var(--space-6)));
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+.skip-link:focus-visible {
+  transform: none;
+  color: var(--color-bg);
+}
+
+/* Headings that receive programmatic focus after navigation should not flash a ring
+   for mouse users, but keyboard users still get a clear indicator. */
+[data-route-focus]:focus {
+  outline: none;
+}
+
+[data-route-focus]:focus-visible {
+  box-shadow: none;
+  outline: 3px solid var(--color-primary);
+  outline-offset: 6px;
+  border-radius: var(--radius-xs);
+}
+
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 3px solid CanvasText;
+    outline-offset: 2px;
+  }
+}
+
+@media print {
+  nav,
+  .skip-link,
+  [data-print="hide"] {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+  }
+}
