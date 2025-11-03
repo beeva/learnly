@@ -34,3 +34,12 @@ describe("applyAttempt", () => {
     expect(state.band).toBe("learning");
   });
 });
+import { decayedPKnown } from "../src/mastery.js";
+
+describe("decayedPKnown", () => {
+  it("halves the gap above the floor after one half-life", () => {
+    const state = { ...initialMastery(skill), pKnown: 0.95, lastPracticedAt: "2025-01-01T00:00:00Z" };
+    const decayed = decayedPKnown(state, new Date("2025-01-22T00:00:00Z"));
+    expect(decayed).toBeCloseTo(0.35 + (0.95 - 0.35) / 2);
+  });
+});
