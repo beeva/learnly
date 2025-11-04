@@ -39,3 +39,14 @@ describe("attemptInputSchema", () => {
     expect(result.success).toBe(false);
   });
 });
+import { joinClassroomSchema } from "../src/schemas.js";
+
+describe("joinClassroomSchema", () => {
+  it("upper-cases and trims codes", () => {
+    expect(joinClassroomSchema.parse({ joinCode: " k7mq4r " }).joinCode).toBe("K7MQ4R");
+  });
+
+  it("rejects ambiguous characters like O and 1", () => {
+    expect(joinClassroomSchema.safeParse({ joinCode: "O1MQ4R" }).success).toBe(false);
+  });
+});
