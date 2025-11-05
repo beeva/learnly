@@ -371,3 +371,53 @@ export const LogoMark = createIcon(
   </>,
 );
 
+export const UsersIcon = createIcon(
+  "UsersIcon",
+  <>
+    <circle cx="9" cy="8.5" r="3.25" />
+    <path d="M3 19.5a6 6 0 0 1 12 0" />
+    <path d="M15.5 5.6a3.25 3.25 0 0 1 0 5.8M17.5 14.2a6 6 0 0 1 3.5 5.3" />
+  </>,
+);
+
+export const DownloadIcon = createIcon(
+  "DownloadIcon",
+  <>
+    <path d="M12 4v11" />
+    <path d="m7.5 10.75 4.5 4.5 4.5-4.5" />
+    <path d="M4.5 19.5h15" />
+  </>,
+);
+
+export const CopyIcon = createIcon(
+  "CopyIcon",
+  <>
+    <rect x="8.5" y="8.5" width="11" height="11" rx="2.5" />
+    <path d="M15.5 8.5V6.75A2.25 2.25 0 0 0 13.25 4.5h-6.5A2.25 2.25 0 0 0 4.5 6.75v6.5a2.25 2.25 0 0 0 2.25 2.25H8.5" />
+  </>,
+);
+
+export const GlobeIcon = createIcon(
+  "GlobeIcon",
+  <>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M3.5 12h17" />
+    <path d="M12 3.5c2.3 2.4 3.4 5.2 3.4 8.5s-1.1 6.1-3.4 8.5c-2.3-2.4-3.4-5.2-3.4-8.5S9.7 5.9 12 3.5z" />
+  </>,
+);
+
+export const FlagIcon = createIcon(
+  "FlagIcon",
+  <>
+    <path d="M5.5 20.5V4" />
+    <path d="M5.5 4.5h11l-2.25 4 2.25 4h-11" />
+  </>,
+);
+
+export const CalendarIcon = createIcon(
+  "CalendarIcon",
+  <>
+    <rect x="3.75" y="5.25" width="16.5" height="15" rx="2.5" />
+    <path d="M3.75 9.75h16.5M8 3.25v4M16 3.25v4" />
+  </>,
+);
