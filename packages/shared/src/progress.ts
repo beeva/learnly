@@ -81,3 +81,18 @@ export function streakBonus(streak: number): number {
   return Math.min(XP_RULES.streakBonusCap, streak * XP_RULES.streakBonusPerDay);
 }
 
+export interface WeeklyActivity {
+  day: string;
+  minutes: number;
+  itemsCorrect: number;
+}
+
+export function weeklyGoalProgress(days: WeeklyActivity[], dailyGoalMinutes: number) {
+  const goalDays = days.filter((d) => d.minutes >= dailyGoalMinutes).length;
+  const totalMinutes = days.reduce((sum, d) => sum + d.minutes, 0);
+  return {
+    goalDays,
+    totalMinutes,
+    ratio: Math.min(1, totalMinutes / (dailyGoalMinutes * 7)),
+  };
+}
