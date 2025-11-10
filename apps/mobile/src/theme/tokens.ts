@@ -201,3 +201,32 @@ export function bandColors(
   }
 }
 
+/**
+ * WCAG 2.2 AA guidance in token form. Touch targets meet the 44pt minimum with
+ * room to spare, and text may grow to 200% before layouts start to clip.
+ */
+export const a11y = {
+  minTouchTarget: 48,
+  maxFontSizeMultiplier: 2,
+  /** Single-line UI labels (tab bar, chips) cap earlier to avoid truncation. */
+  compactFontSizeMultiplier: 1.4,
+  hitSlop: { top: 8, bottom: 8, left: 8, right: 8 },
+  /** Minimum contrast ratios every text token is held to (see contrast.test.ts). */
+  contrast: { text: 4.5, largeText: 3, ui: 3 },
+} as const;
+
+/** Foreground/background pairs that ship in the UI and must meet AA. */
+export function textPairs(colors: ColorTokens): { name: string; fg: string; bg: string; min: number }[] {
+  return [
+    { name: "text on background", fg: colors.text, bg: colors.background, min: a11y.contrast.text },
+    { name: "muted text on background", fg: colors.textMuted, bg: colors.background, min: a11y.contrast.text },
+    { name: "subtle text on surface", fg: colors.textSubtle, bg: colors.surface, min: a11y.contrast.text },
+    { name: "button label on primary", fg: colors.onPrimary, bg: colors.primary, min: a11y.contrast.text },
+    { name: "primary text on surface", fg: colors.primaryText, bg: colors.surface, min: a11y.contrast.text },
+    { name: "success text on soft", fg: colors.successText, bg: colors.successSoft, min: a11y.contrast.text },
+    { name: "warning text on soft", fg: colors.warningText, bg: colors.warningSoft, min: a11y.contrast.text },
+    { name: "danger text on soft", fg: colors.dangerText, bg: colors.dangerSoft, min: a11y.contrast.text },
+    { name: "accent text on soft", fg: colors.accentText, bg: colors.accentSoft, min: a11y.contrast.text },
+    { name: "primary text on soft", fg: colors.primaryText, bg: colors.primarySoft, min: a11y.contrast.text },
+  ];
+}
