@@ -93,3 +93,17 @@ Teachers create a classroom, share a six-character join code, and get:
 | **4.9★** | student rating in in-app surveys |
 | **3** | platforms: web, iOS and Android |
 | **< 2s** | lesson load on any device |
+
+## Quality
+
+- TypeScript strict mode everywhere, with types shared from `@learnly/shared`
+- Unit tests (Vitest and Jest) and API integration tests (Supertest)
+- Playwright end-to-end smoke tests and automated axe accessibility checks targeting WCAG 2.2 AA
+- Lighthouse budget in CI: lesson route LCP < 2s on a mid-range mobile profile
+
+## Deployment
+
+Infrastructure is defined in Terraform (`infra/terraform`): ECS Fargate for the API,
+RDS Postgres, and S3 + CloudFront for the web app. GitHub Actions runs CI on every
+pull request and deploys `main` to staging. Releases are promoted to production by tag.
+See [docs/runbook.md](docs/runbook.md).
