@@ -21,3 +21,15 @@ export function formatMessage(template: string, values: Record<string, string | 
   return template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? `{${key}}`));
 }
 
+export const LOCALES = [
+  { code: "en", label: "English" },
+  { code: "es", label: "Español" },
+  { code: "fil", label: "Filipino" },
+] as const;
+
+export type LocaleCode = (typeof LOCALES)[number]["code"];
+
+export function resolveLocale(requested: string | null | undefined): LocaleCode {
+  const short = (requested ?? "").toLowerCase().split(/[-_]/)[0];
+  return (LOCALES.find((l) => l.code === short)?.code ?? "en") as LocaleCode;
+}
