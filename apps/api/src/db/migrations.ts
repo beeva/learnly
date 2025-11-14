@@ -11,3 +11,11 @@ MIGRATIONS.push("004_sessions", "005_progress");
 
 MIGRATIONS.push("006_sync");
 
+MIGRATIONS.push(
+  "007_engine_v2",
+  "008_audit_log",
+  "009_classrooms",
+  "010_analytics_events",
+  "011_item_calibration",
+  "012_job_runs",
+);
