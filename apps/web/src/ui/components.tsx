@@ -780,3 +780,127 @@ export function Dialog({ open, onClose, title, description, children, footer, si
   );
 }
 
+export interface TabItem<V extends string> {
+  value: V;
+  label: ReactNode;
+  icon?: IconComponent;
+}
+
+export interface TabsProps<V extends string> {
+  label: string;
+  value: V;
+  items: TabItem<V>[];
+  onChange: (value: V) => void;
+  /** id prefix used to link each tab with its panel (`${idPrefix}-panel-${value}`). */
+  idPrefix: string;
+  className?: string;
+}
+
+/**
+ * WAI-ARIA tabs with automatic activation: arrow keys move between tabs,
+ * Home/End jump to the ends, and only the active tab is in the tab order.
+ */
+export function Tabs<V extends string>({ label, value, items, onChange, idPrefix, className }: TabsProps<V>) {
+  const listRef = useRef<HTMLDivElement>(null);
+
+  function focusTab(index: number) {
+    const next = items[(index + items.length) % items.length];
+    if (!next) return;
+    onChange(next.value);
+    requestAnimationFrame(() => {
+      listRef.current?.querySelector<HTMLButtonElement>(`[data-value="${next.value}"]`)?.focus();
+    });
+  }
+
+  function onKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    const index = items.findIndex((item) => item.value === value);
+    if (event.key === "ArrowRight") focusTab(index + 1);
+    else if (event.key === "ArrowLeft") focusTab(index - 1);
+    else if (event.key === "Home") focusTab(0);
+    else if (event.key === "End") focusTab(items.length - 1);
+    else return;
+    event.preventDefault();
+  }
+
+  return (
+    // eslint-disable-next-line jsx-a11y/interactive-supports-focus -- roving tabindex: the selected child is the tab stop
+    <div ref={listRef} role="tablist" aria-label={label} className={cx(styles.tabs, className)} onKeyDown={onKeyDown}>
+      {items.map((item) => {
+        const selected = item.value === value;
+        const Icon = item.icon;
+        return (
+          <button
+            key={item.value}
+            type="button"
+            role="tab"
+            id={`${idPrefix}-tab-${item.value}`}
+            aria-selected={selected}
+            aria-controls={`${idPrefix}-panel-${item.value}`}
+            tabIndex={selected ? 0 : -1}
+            data-value={item.value}
+            className={cx(styles.tab, selected && styles.tabSelected)}
+            onClick={() => onChange(item.value)}
+          >
+            {selected ? <motion.span layoutId={`${idPrefix}-indicator`} className={styles.tabIndicator} transition={{ type: "spring", stiffness: 500, damping: 40 }} /> : null}
+            {Icon ? <Icon size={16} /> : null}
+            <span className={styles.tabLabel}>{item.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function TabPanel({ idPrefix, value, children, className }: { idPrefix: string; value: string; children: ReactNode; className?: string }) {
+  return (
+    <div role="tabpanel" id={`${idPrefix}-panel-${value}`} aria-labelledby={`${idPrefix}-tab-${value}`} tabIndex={0} className={cx(styles.tabPanel, className)}>
+      {children}
+    </div>
+  );
+}
+
+export interface TooltipProps {
+  content: ReactNode;
+  children: ReactNode;
+  side?: "top" | "bottom";
+}
+
+/**
+ * Lightweight tooltip for supplementary text. Shows on hover and keyboard focus,
+ * dismisses on Escape (WCAG 1.4.13) and is linked with aria-describedby.
+ */
+export function Tooltip({ content, children, side = "top" }: TooltipProps) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  return (
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- listens to focus/hover bubbling from the focusable trigger inside
+    <span
+      className={styles.tooltipAnchor}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocus={() => setOpen(true)}
+      onBlur={() => setOpen(false)}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") setOpen(false);
+      }}
+      aria-describedby={open ? id : undefined}
+    >
+      {children}
+      <AnimatePresence>
+        {open ? (
+          <motion.span
+            id={id}
+            role="tooltip"
+            className={cx(styles.tooltip, side === "bottom" && styles.tooltipBottom)}
+            initial={{ opacity: 0, y: side === "top" ? 4 : -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.12 }}
+          >
+            {content}
+          </motion.span>
+        ) : null}
+      </AnimatePresence>
+    </span>
+  );
+}
