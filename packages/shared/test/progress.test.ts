@@ -42,3 +42,14 @@ describe("advanceStreak", () => {
     expect(next.longest).toBe(9);
   });
 });
+import { weeklyGoalProgress } from "../src/progress.js";
+
+describe("weeklyGoalProgress", () => {
+  it("counts days that met the goal and caps the ratio", () => {
+    const days = Array.from({ length: 7 }, (_, i) => ({ day: `2025-06-0${i + 1}`, minutes: i % 2 ? 30 : 5, itemsCorrect: 3 }));
+    const result = weeklyGoalProgress(days, 15);
+    expect(result.goalDays).toBe(3);
+    expect(result.totalMinutes).toBe(110);
+    expect(result.ratio).toBe(1);
+  });
+});
