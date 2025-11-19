@@ -14,3 +14,24 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      DATABASE_URL: postgres://learnly:learnly@postgres:5432/learnly
+      JWT_SECRET: local-development-secret-change-me
+      NODE_ENV: development
+      PORT: "4000"
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+  prometheus:
+    image: prom/prometheus:v2.53.1
+    volumes:
+      - ./infra/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    profiles: ["observability"]
