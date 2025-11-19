@@ -395,3 +395,44 @@ export const learnerKeys = {
   courseMastery: (slug: string) => ["course-mastery", slug] as const,
 };
 
+type Classroom = import("@learnly/shared").Classroom;
+type ClassroomMember = import("@learnly/shared").ClassroomMember;
+type ClassroomInsights = import("@learnly/shared").ClassroomInsights;
+type MasteryHeatmap = import("@learnly/shared").MasteryHeatmap;
+
+export interface InsightsRange {
+  from: string;
+  to: string;
+}
+
+export const educatorApi = {
+  classrooms: () => request<{ classrooms: Classroom[] }>("/classrooms"),
+  createClassroom: (input: { name: string; courseId: string }) =>
+    request<{ classroom: Classroom }>("/classrooms", { method: "POST", body: input }),
+  joinClassroom: (joinCode: string) => request<{ classroom: Classroom }>("/classrooms/join", { method: "POST", body: { joinCode } }),
+  members: (id: string) => request<{ members: ClassroomMember[] }>(`/classrooms/${encodeURIComponent(id)}/members`),
+  insights: (id: string, range: InsightsRange) =>
+    request<ClassroomInsights>(
+      `/classrooms/${encodeURIComponent(id)}/insights?${new URLSearchParams({ from: range.from, to: range.to }).toString()}`,
+    ),
+  heatmap: (id: string) => request<MasteryHeatmap>(`/classrooms/${encodeURIComponent(id)}/heatmap`),
+  exportCsv: (id: string) => request<string>(`/classrooms/${encodeURIComponent(id)}/export.csv`, { parse: "text" }),
+};
+
+export const educatorKeys = {
+  classrooms: ["classrooms"] as const,
+  members: (id: string) => ["classroom", id, "members"] as const,
+  insights: (id: string, range: InsightsRange) => ["classroom", id, "insights", range.from, range.to] as const,
+  heatmap: (id: string) => ["classroom", id, "heatmap"] as const,
+};
+
+export interface AnalyticsEvent {
+  name: string;
+  at: string;
+  props?: Record<string, string | number | boolean>;
+}
+
+export const eventsApi = {
+  send: (events: AnalyticsEvent[], options: { keepalive?: boolean } = {}) =>
+    request<void>("/events", { method: "POST", body: { events }, keepalive: options.keepalive }),
+};
