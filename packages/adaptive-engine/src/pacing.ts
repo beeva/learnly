@@ -38,3 +38,11 @@ export function recommendPace(signals: PaceSignal[], expectedMs = 45_000): PaceR
   return { decision: "steady", levelDelta: 0, insertWorkedExample: accuracy < 0.65 };
 }
 
+/**
+ * Very fast wrong answers in a row usually mean a learner is guessing to get
+ * through. We don't penalise it — we suggest a break or a different activity.
+ */
+export function looksLikeRapidGuessing(signals: PaceSignal[], thresholdMs = 4000): boolean {
+  const recent = signals.slice(-4);
+  return recent.length === 4 && recent.every((s) => !s.correct && s.durationMs < thresholdMs);
+}
