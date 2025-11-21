@@ -66,3 +66,8 @@ export function syncBackoffMs(failures: number, random: () => number = Math.rand
   return Math.round(base * (0.5 + random() * 0.5));
 }
 
+export const SYNC_RETENTION_DAYS = 30;
+
+export function isExpiredOperation(op: SyncOperation, now = Date.now()): boolean {
+  return now - Date.parse(op.createdAt) > SYNC_RETENTION_DAYS * 86_400_000;
+}
