@@ -37,3 +37,17 @@ describe("syncBackoffMs", () => {
     expect(syncBackoffMs(3, () => 0)).toBe(4000);
   });
 });
+import { isExpiredOperation } from "../src/sync.js";
+
+describe("isExpiredOperation", () => {
+  it("flags operations older than the retention window", () => {
+    const op = {
+      opId: "0b6c3d36-9e7f-4c1e-8b0a-6a3f2d1e4c5b",
+      type: "preferences.update" as const,
+      createdAt: "2025-01-01T00:00:00.000Z",
+      payload: { dailyGoalMinutes: 15 },
+    };
+    expect(isExpiredOperation(op, Date.parse("2025-01-20T00:00:00Z"))).toBe(false);
+    expect(isExpiredOperation(op, Date.parse("2025-03-01T00:00:00Z"))).toBe(true);
+  });
+});
