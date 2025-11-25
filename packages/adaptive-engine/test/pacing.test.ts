@@ -18,3 +18,11 @@ describe("recommendPace", () => {
     expect(rec.decision).toBe("speed_up");
   });
 });
+import { looksLikeRapidGuessing } from "../src/pacing.js";
+
+describe("looksLikeRapidGuessing", () => {
+  it("needs four fast misses in a row", () => {
+    expect(looksLikeRapidGuessing([signal(false, 1500), signal(false, 1200), signal(false, 900)])).toBe(false);
+    expect(looksLikeRapidGuessing(Array.from({ length: 4 }, () => signal(false, 1500)))).toBe(true);
+  });
+});
