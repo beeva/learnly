@@ -71,3 +71,18 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @learnly/mobile typecheck
       - run: pnpm --filter @learnly/mobile test -- --ci
+  lighthouse:
+    runs-on: ubuntu-latest
+    needs: e2e
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @learnly/web build
+        env:
+          VITE_USE_MOCKS: "true"
+      - run: npx @lhci/cli@0.14.x autorun --config=apps/web/lighthouserc.json
