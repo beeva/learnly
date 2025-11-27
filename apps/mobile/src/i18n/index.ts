@@ -78,3 +78,54 @@ export function plural(count: number, one: string, other: string): string {
   return count === 1 ? one : other;
 }
 
+const formatterCache = new Map<string, Intl.NumberFormat | Intl.DateTimeFormat>();
+
+function intlLocale(locale: string): string {
+  // Filipino is "fil" in Intl; Hermes ships with full ICU on both platforms in SDK 51.
+  return locale === "fil" ? "fil-PH" : locale;
+}
+
+export function formatNumber(value: number, options: Intl.NumberFormatOptions = {}, locale = activeLocale): string {
+  const key = `n:${locale}:${JSON.stringify(options)}`;
+  let formatter = formatterCache.get(key) as Intl.NumberFormat | undefined;
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(intlLocale(locale), options);
+    formatterCache.set(key, formatter);
+  }
+  return formatter.format(value);
+}
+
+export function formatPercent(ratio: number, locale = activeLocale): string {
+  return formatNumber(ratio, { style: "percent", maximumFractionDigits: 0 }, locale);
+}
+
+export function formatTime(date: Date, locale = activeLocale): string {
+  const key = `t:${locale}`;
+  let formatter = formatterCache.get(key) as Intl.DateTimeFormat | undefined;
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(intlLocale(locale), { hour: "numeric", minute: "2-digit" });
+    formatterCache.set(key, formatter);
+  }
+  return formatter.format(date);
+}
+
+const RELATIVE_FALLBACK: Record<string, { now: string; minutes: string; hours: string; days: string }> = {
+  en: { now: "just now", minutes: "{n} min ago", hours: "{n} h ago", days: "{n} d ago" },
+};
+
+export function formatRelative(iso: string | null, now = Date.now(), locale = activeLocale): string {
+  if (!iso) return translate("common", "never", "never", undefined, locale);
+  const diffSec = Math.round((Date.parse(iso) - now) / 1000);
+  const abs = Math.abs(diffSec);
+  if (abs < 45) return translate("common", "justNow", RELATIVE_FALLBACK.en!.now, undefined, locale);
+  try {
+    const rtf = new Intl.RelativeTimeFormat(intlLocale(locale), { numeric: "auto", style: "short" });
+    if (abs < 3600) return rtf.format(Math.round(diffSec / 60), "minute");
+    if (abs < 86_400) return rtf.format(Math.round(diffSec / 3600), "hour");
+    return rtf.format(Math.round(diffSec / 86_400), "day");
+  } catch {
+    const n = abs < 3600 ? Math.round(abs / 60) : abs < 86_400 ? Math.round(abs / 3600) : Math.round(abs / 86_400);
+    const unit = abs < 3600 ? "minutes" : abs < 86_400 ? "hours" : "days";
+    return formatMessage(RELATIVE_FALLBACK.en![unit], { n });
+  }
+}
