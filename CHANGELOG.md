@@ -43,3 +43,8 @@ All notable changes to Learnly are listed here, oldest release first.
 - Adaptive engine v2 (knowledge tracing and spaced review), rolled out at 10%, then 50%, then 100%
 - Review sessions for skills that are due
 - Nightly calibration of item difficulty
+
+## 1.3.0 — 2026-01-16
+
+- Accessibility pass to WCAG 2.2 AA: focus management, live feedback regions, dynamic type
+- Rapid-guessing detection suggests a short break instead of penalising the student
