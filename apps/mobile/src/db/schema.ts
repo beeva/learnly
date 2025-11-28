@@ -150,3 +150,14 @@ export async function clearLearnerData(): Promise<void> {
   `);
 }
 
+migration(
+  2,
+  "dead_letter_and_indexes",
+  `
+  ALTER TABLE outbox ADD COLUMN dead_reason TEXT;
+  ALTER TABLE outbox ADD COLUMN dead_at TEXT;
+  CREATE INDEX IF NOT EXISTS items_skill ON items (skill_id, difficulty);
+  CREATE INDEX IF NOT EXISTS items_lesson ON items (lesson_id);
+  CREATE INDEX IF NOT EXISTS lessons_course ON lessons (course_slug, downloaded);
+  `,
+);
