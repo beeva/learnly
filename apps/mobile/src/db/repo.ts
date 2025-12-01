@@ -288,3 +288,25 @@ export const masteryRepo = {
   },
 };
 
+export interface StorageStats {
+  downloadedLessons: number;
+  cachedItems: number;
+  scorableItems: number;
+  approxBytes: number;
+}
+
+export async function storageStats(): Promise<StorageStats> {
+  const db = await getDb();
+  const lessons = await db.getFirstAsync<{ n: number; bytes: number | null }>(
+    "SELECT COUNT(*) AS n, SUM(LENGTH(lesson_json)) AS bytes FROM lessons WHERE downloaded = 1",
+  );
+  const items = await db.getFirstAsync<{ n: number; keyed: number; bytes: number | null }>(
+    "SELECT COUNT(*) AS n, SUM(key_json IS NOT NULL) AS keyed, SUM(LENGTH(item_json)) AS bytes FROM items",
+  );
+  return {
+    downloadedLessons: lessons?.n ?? 0,
+    cachedItems: items?.n ?? 0,
+    scorableItems: items?.keyed ?? 0,
+    approxBytes: (lessons?.bytes ?? 0) + (items?.bytes ?? 0),
+  };
+}
