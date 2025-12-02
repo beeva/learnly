@@ -107,3 +107,36 @@ registerNavItem({ id: "home", to: "/home", label: "Home", icon: Icons.HomeIcon, 
 registerNavItem({ id: "progress", to: "/progress", label: "Progress", icon: Icons.ChartIcon, order: 40 });
 registerNavItem({ id: "settings", to: "/settings", label: "Settings", icon: Icons.SettingsIcon, order: 90 });
 
+shellChildren.push(
+  {
+    path: "teach",
+    element: (
+      <RequireAuth roles={["educator", "admin"]}>
+        <Outlet />
+      </RequireAuth>
+    ),
+    children: [
+      { index: true, lazy: () => import("../features/educator/ClassroomsPage").then((m) => ({ Component: m.ClassroomsPage })) },
+      { path: ":classroomId", lazy: () => import("../features/educator/InsightsPage").then((m) => ({ Component: m.InsightsPage })) },
+    ],
+  },
+  { path: "join", lazy: () => import("../features/classroom/JoinClassroomPage").then((m) => ({ Component: m.JoinClassroomPage })) },
+);
+
+// Educators land on their classes; the learner dashboard stays student-only.
+const learnerHome = homeRoute.lazy;
+homeRoute.lazy = async () => {
+  const learner = learnerHome ? await learnerHome() : undefined;
+  const LearnerHome = learner?.Component;
+  function RoleAwareHome() {
+    const { user } = useAuth();
+    if (user && user.role !== "student") return <Navigate to="/teach" replace />;
+    return LearnerHome ? <LearnerHome /> : null;
+  }
+  return { Component: RoleAwareHome };
+};
+
+registerNavItem({ id: "home", to: "/home", label: "Home", icon: Icons.HomeIcon, order: 0, roles: ["student"] });
+registerNavItem({ id: "progress", to: "/progress", label: "Progress", icon: Icons.ChartIcon, order: 40, roles: ["student"] });
+registerNavItem({ id: "teach", to: "/teach", label: "Classes", icon: Icons.GraduationCapIcon, order: 5, roles: ["educator", "admin"] });
+registerNavItem({ id: "join", to: "/join", label: "Join a class", icon: Icons.GraduationCapIcon, order: 50, roles: ["student"] });
