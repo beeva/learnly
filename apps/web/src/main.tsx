@@ -89,3 +89,48 @@ boot.push(
   ),
 );
 
+boot.push(
+  Promise.all([import("./app/ErrorBoundary"), import("./app/RouteError"), import("./app/router")]).then(
+    ([{ AppErrorBoundary }, { RouteError }, { rootRoute }]) => {
+      rootRoute.errorElement = <RouteError />;
+      wrappers.unshift((children) => <AppErrorBoundary>{children}</AppErrorBoundary>);
+    },
+  ),
+  Promise.all([import("./a11y/SkipLink"), import("./a11y/RouteFocus"), import("./a11y/announcer")]).then(
+    ([{ SkipLink }, { RouteFocus }, { Announcer }]) => {
+      wrappers.push((children, { router }) => (
+        <>
+          <SkipLink />
+          {children}
+          <RouteFocus router={router} />
+          <Announcer />
+        </>
+      ));
+    },
+  ),
+  Promise.all([import("./analytics/tracker"), import("./analytics/events"), import("./perf/prefetch"), import("./perf/lessonTiming")]).then(
+    ([{ installAnalytics }, { PageViewTracker }, { PrefetchOnIntent }, { LessonTiming }]) => {
+      installAnalytics(queryClient);
+      wrappers.push((children, context) => (
+        <>
+          {children}
+          <PageViewTracker router={context.router} />
+          <PrefetchOnIntent router={context.router} queryClient={context.queryClient} />
+          <LessonTiming router={context.router} />
+        </>
+      ));
+    },
+  ),
+  Promise.all([import("./i18n/I18nProvider"), import("./i18n/LocaleSwitcher"), import("./app/AppShell")]).then(
+    ([i18n, { LocaleSwitcher, LocaleSync }, shell]) => {
+      shell.shellConfig.navLabel = (item) => i18n.translateOr(`nav.${item.id}`, item.label);
+      shell.registerShellSlot("sidebarFooter", LocaleSwitcher);
+      wrappers.push((children) => (
+        <>
+          <LocaleSync />
+          {children}
+        </>
+      ));
+    },
+  ),
+);
