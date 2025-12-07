@@ -866,3 +866,377 @@ export function recommendations(userId: string): Recommendation[] {
   return out.slice(0, 5);
 }
 
+type Classroom = import("@learnly/shared").Classroom;
+type ClassroomMember = import("@learnly/shared").ClassroomMember;
+type ClassroomInsights = import("@learnly/shared").ClassroomInsights;
+type MasteryHeatmap = import("@learnly/shared").MasteryHeatmap;
+type MasteryBand = import("@learnly/shared").MasteryBand;
+type SkillHotspot = import("@learnly/shared").SkillHotspot;
+type StudentSnapshot = import("@learnly/shared").StudentSnapshot;
+
+interface RosterStudent {
+  id: string;
+  displayName: string;
+  avatarColor: string;
+  joinedAt: string;
+  minutesThisWeek: number;
+  streak: number;
+  lastActiveDaysAgo: number | null;
+  /** skillId → pKnown, for skills the student has attempted. */
+  mastery: Record<string, number>;
+  /** skillId → attempts, used for error rates. */
+  attempts: Record<string, number>;
+}
+
+interface EducatorState {
+  version: 1;
+  classrooms: Classroom[];
+  rosters: Record<string, RosterStudent[]>;
+}
+
+const EDUCATOR_KEY = "learnly.mock-educator.v1";
+
+/** Small deterministic PRNG so the demo roster looks identical on every visit. */
+function mulberry32(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const FIRST_NAMES = [
+  "Amara", "Diego", "Hana", "Liam", "Priya", "Mateo", "Zoe", "Kofi", "Sofia", "Ethan", "Aiyana", "Noah",
+  "Mei", "Lucas", "Fatima", "Oliver", "Isabela", "Jamal", "Chloe", "Ravi", "Nora", "Theo", "Yuki", "Malik",
+  "Elena", "Sam", "Ines", "Kai", "Leah", "Omar",
+];
+const LAST_INITIALS = "ABCDEFGHJKLMNOPRSTVWY";
+
+const MISCONCEPTIONS: Record<string, string> = {
+  "3.NF.1": "Counts all slices as the numerator (writes 8/3 instead of 3/8)",
+  "3.NF.2": "Treats the number of tick marks as the denominator",
+  "4.NF.1": "Adds the same number to top and bottom (2/3 → 3/4)",
+  "4.NF.1b": "Divides only the numerator when simplifying",
+  "4.NF.2": "Thinks a bigger denominator means a bigger fraction (3/8 > 3/5)",
+  "4.NF.3": "Adds the denominators too (1/4 + 1/4 = 2/8)",
+  "6.EE.1": "Works strictly left to right (3 + 4 × 2 = 14)",
+  "6.EE.2c": "Reads 4x as forty-something when x is substituted",
+  "6.EE.7": "Applies the same operation instead of the inverse",
+  "7.EE.4": "Divides before undoing the addition",
+};
+
+function buildRoster(courseId: string, count: number, seed: number): RosterStudent[] {
+  const random = mulberry32(seed);
+  const record = courseById(courseId);
+  const skillList = record ? courseSkills(record) : [];
+  return Array.from({ length: count }, (_, index) => {
+    const name = `${FIRST_NAMES[(index * 7 + seed) % FIRST_NAMES.length]} ${LAST_INITIALS[Math.floor(random() * LAST_INITIALS.length)]}.`;
+    // Each student has an overall strength and progresses through the course to a point.
+    const strength = 0.25 + random() * 0.7;
+    const reach = Math.max(1, Math.round(skillList.length * (0.35 + random() * 0.65)));
+    const mastery: Record<string, number> = {};
+    const attempts: Record<string, number> = {};
+    skillList.slice(0, reach).forEach((skill, position) => {
+      const decay = position * 0.07;
+      const hard = skill.code === "4.NF.3" || skill.code === "4.NF.2" || skill.code === "7.EE.4" ? 0.18 : 0;
+      const p = Math.min(0.98, Math.max(0.05, strength - decay - hard + (random() - 0.5) * 0.25));
+      mastery[skill.id] = Number(p.toFixed(2));
+      attempts[skill.id] = 3 + Math.floor(random() * 9);
+    });
+    const disengaged = random() < 0.16;
+    return {
+      id: seedUuid(ID_KIND.user, 1000 + seed * 100 + index),
+      displayName: name,
+      avatarColor: AVATAR_COLORS[index % AVATAR_COLORS.length] ?? "#5B5BD6",
+      joinedAt: daysAgo(30 + Math.floor(random() * 20)).toISOString(),
+      minutesThisWeek: disengaged ? Math.floor(random() * 12) : 25 + Math.floor(random() * 75),
+      streak: disengaged ? 0 : Math.floor(random() * 15),
+      lastActiveDaysAgo: disengaged ? 6 + Math.floor(random() * 8) : Math.floor(random() * 3),
+      mastery,
+      attempts,
+    };
+  });
+}
+
+function seedEducatorState(): EducatorState {
+  const fractions = courses.find((record) => record.course.slug === "fractions-foundations");
+  const algebra = courses.find((record) => record.course.slug === "algebra-readiness");
+  const classrooms: Classroom[] = [];
+  const rosters: Record<string, RosterStudent[]> = {};
+  const add = (n: number, name: string, courseId: string | undefined, code: string, students: number, seed: number) => {
+    if (!courseId) return;
+    const id = seedUuid(ID_KIND.classroom, n);
+    rosters[id] = buildRoster(courseId, students, seed);
+    classrooms.push({
+      id: asId(id),
+      name,
+      educatorId: asId(DEMO_EDUCATOR_ID),
+      courseId: asId(courseId),
+      joinCode: code,
+      studentCount: students,
+      createdAt: daysAgo(60 - n * 7).toISOString(),
+    });
+  };
+  add(1, "Period 2 · Fractions", fractions?.course.id, "FRAC24", 24, 3);
+  add(2, "Period 5 · Algebra Readiness", algebra?.course.id, "ALG7KM", 18, 5);
+  return { version: 1, classrooms, rosters };
+}
+
+function loadEducator(): EducatorState {
+  try {
+    const raw = localStorage.getItem(EDUCATOR_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as EducatorState;
+      if (parsed.version === 1) return parsed;
+    }
+  } catch {
+    /* ignore */
+  }
+  return seedEducatorState();
+}
+
+let educator: EducatorState = loadEducator();
+
+function saveEducator() {
+  try {
+    localStorage.setItem(EDUCATOR_KEY, JSON.stringify(educator));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function resetEducatorDb(): void {
+  educator = seedEducatorState();
+  saveEducator();
+}
+
+const JOIN_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+function newJoinCode(): string {
+  let code = "";
+  do {
+    code = Array.from({ length: 6 }, () => JOIN_ALPHABET[Math.floor(Math.random() * JOIN_ALPHABET.length)]).join("");
+  } while (educator.classrooms.some((classroom) => classroom.joinCode === code));
+  return code;
+}
+
+export function classroomsFor(user: User): Classroom[] {
+  if (user.role === "student") {
+    return educator.classrooms.filter((classroom) => (educator.rosters[classroom.id] ?? []).some((student) => student.id === user.id));
+  }
+  return educator.classrooms.filter((classroom) => user.role === "admin" || classroom.educatorId === user.id);
+}
+
+function ownedClassroom(user: User, classroomId: string): Classroom {
+  const classroom = educator.classrooms.find((candidate) => candidate.id === classroomId);
+  if (!classroom) throw new MockHttpError(404, "not_found", "Classroom not found.");
+  if (user.role !== "admin" && classroom.educatorId !== user.id) throw new MockHttpError(403, "forbidden", "This classroom belongs to another educator.");
+  return classroom;
+}
+
+export function createClassroom(user: User, input: { name: string; courseId: string }): Classroom {
+  if (!courseById(input.courseId)) throw new MockHttpError(400, "validation_failed", "Pick a course for this classroom.");
+  const classroom: Classroom = {
+    id: asId(crypto.randomUUID()),
+    name: input.name,
+    educatorId: user.id,
+    courseId: asId(input.courseId),
+    joinCode: newJoinCode(),
+    studentCount: 0,
+    createdAt: new Date().toISOString(),
+  };
+  educator.classrooms.unshift(classroom);
+  educator.rosters[classroom.id] = [];
+  saveEducator();
+  return classroom;
+}
+
+export function joinClassroom(user: User, joinCode: string): Classroom {
+  const classroom = educator.classrooms.find((candidate) => candidate.joinCode === joinCode.toUpperCase());
+  if (!classroom) throw new MockHttpError(404, "not_found", "We couldn't find a class with that code.");
+  const roster = (educator.rosters[classroom.id] ??= []);
+  if (roster.some((student) => student.id === user.id)) throw new MockHttpError(409, "conflict", "You're already in this class.");
+  const record = courseById(classroom.courseId);
+  const mastery: Record<string, number> = {};
+  const attempts: Record<string, number> = {};
+  for (const skill of record ? courseSkills(record) : []) {
+    const m = masteryFor(user.id, skill.id);
+    if (m.attempts > 0) {
+      mastery[skill.id] = m.pKnown;
+      attempts[skill.id] = m.attempts;
+    }
+  }
+  const summary = progressSummary(user.id);
+  roster.push({
+    id: user.id,
+    displayName: user.displayName,
+    avatarColor: user.avatarColor,
+    joinedAt: new Date().toISOString(),
+    minutesThisWeek: recentActivity(user.id).reduce((sum, day) => sum + day.minutes, 0),
+    streak: summary.streak.current,
+    lastActiveDaysAgo: 0,
+    mastery,
+    attempts,
+  });
+  const updated = { ...classroom, studentCount: roster.length };
+  educator.classrooms = educator.classrooms.map((candidate) => (candidate.id === classroom.id ? updated : candidate));
+  saveEducator();
+  return updated;
+}
+
+export function classroomMembers(user: User, classroomId: string): ClassroomMember[] {
+  const classroom = ownedClassroom(user, classroomId);
+  return (educator.rosters[classroom.id] ?? []).map((student) => ({
+    classroomId: classroom.id,
+    userId: asId(student.id),
+    displayName: student.displayName,
+    avatarColor: student.avatarColor,
+    joinedAt: student.joinedAt,
+  }));
+}
+
+function bandOf(p: number | undefined, attempts: number | undefined): MasteryBand {
+  return p === undefined ? "new" : bandFor(p, attempts ?? 0);
+}
+
+function snapshot(student: RosterStudent, skillCount: number, windowDays: number): StudentSnapshot {
+  const values = Object.values(student.mastery);
+  const masteredSkills = Object.entries(student.mastery).filter(([skillId, p]) => bandOf(p, student.attempts[skillId]) === "mastered").length;
+  const struggling = values.filter((p) => p < 0.35).length;
+  const inactive = student.lastActiveDaysAgo === null || student.lastActiveDaysAgo >= 5;
+  return {
+    userId: asId(student.id),
+    displayName: student.displayName,
+    avatarColor: student.avatarColor,
+    minutesThisWeek: Math.round((student.minutesThisWeek * Math.min(windowDays, 7)) / 7),
+    streak: student.streak,
+    masteredSkills,
+    needsAttention: inactive || struggling >= Math.max(2, Math.ceil(skillCount / 3)),
+    lastActiveAt: student.lastActiveDaysAgo === null ? null : daysAgo(student.lastActiveDaysAgo).toISOString(),
+  };
+}
+
+export function classroomInsights(user: User, classroomId: string, range: { from: string; to: string }): ClassroomInsights {
+  const classroom = ownedClassroom(user, classroomId);
+  const record = courseById(classroom.courseId);
+  const skillList = record ? courseSkills(record) : [];
+  const roster = educator.rosters[classroom.id] ?? [];
+  const windowDays = Math.max(1, Math.round((Date.parse(range.to) - Date.parse(range.from)) / DAY_MS) + 1);
+
+  const distribution: Record<MasteryBand, number> = { new: 0, learning: 0, practicing: 0, mastered: 0 };
+  for (const student of roster) {
+    for (const skill of skillList) distribution[bandOf(student.mastery[skill.id], student.attempts[skill.id])] += 1;
+  }
+
+  const hotspots: SkillHotspot[] = skillList
+    .map((skill) => {
+      const attempted = roster.filter((student) => student.mastery[skill.id] !== undefined);
+      if (attempted.length === 0) return null;
+      const meanP = attempted.reduce((sum, student) => sum + (student.mastery[skill.id] ?? 0), 0) / attempted.length;
+      // Error rate in the window tracks (1 − mastery), softened by how much practice there was.
+      const errorRate = Math.min(0.95, Math.max(0.03, (1 - meanP) * 0.82));
+      return {
+        skillId: skill.id,
+        skillName: skill.name,
+        unitTitle: skills.get(skill.id)?.unitTitle ?? "",
+        errorRate: Number(errorRate.toFixed(2)),
+        studentsStruggling: attempted.filter((student) => (student.mastery[skill.id] ?? 0) < 0.45).length,
+        commonMisconception: errorRate > 0.3 ? (MISCONCEPTIONS[skill.code] ?? null) : null,
+      };
+    })
+    .filter((hotspot): hotspot is SkillHotspot => hotspot !== null && hotspot.errorRate >= 0.25)
+    .sort((a, b) => b.errorRate - a.errorRate)
+    .slice(0, 5);
+
+  const students = roster.map((student) => snapshot(student, skillList.length, windowDays));
+  const totalCells = Math.max(1, roster.length * skillList.length);
+  const completionRate = (distribution.practicing + distribution.mastered) / totalCells;
+  const averageMinutesPerStudent = students.length === 0 ? 0 : students.reduce((sum, s) => sum + s.minutesThisWeek, 0) / students.length;
+
+  return {
+    classroomId: classroom.id,
+    generatedAt: new Date().toISOString(),
+    window: range,
+    completionRate: Number(completionRate.toFixed(3)),
+    averageMinutesPerStudent: Math.round(averageMinutesPerStudent),
+    masteryDistribution: distribution,
+    hotspots,
+    students,
+  };
+}
+
+export function classroomHeatmap(user: User, classroomId: string): MasteryHeatmap {
+  const classroom = ownedClassroom(user, classroomId);
+  const record = courseById(classroom.courseId);
+  const skillList = record ? courseSkills(record) : [];
+  const roster = educator.rosters[classroom.id] ?? [];
+  return {
+    skills: skillList.map((skill) => ({ id: skill.id, name: skill.name })),
+    students: roster.map((student) => ({ id: asId(student.id), displayName: student.displayName })),
+    cells: roster.flatMap((student) =>
+      skillList.map((skill) => {
+        const p = student.mastery[skill.id];
+        return { userId: asId(student.id), skillId: skill.id, pKnown: p ?? 0, band: bandOf(p, student.attempts[skill.id]) };
+      }),
+    ),
+  };
+}
+
+function csvCell(value: string | number | boolean | null): string {
+  const text = value === null ? "" : String(value);
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+export function classroomCsv(user: User, classroomId: string): string {
+  const classroom = ownedClassroom(user, classroomId);
+  const insights = classroomInsights(user, classroomId, { from: dayKey(daysAgo(6)), to: dayKey() });
+  const heatmap = classroomHeatmap(user, classroomId);
+  const header = ["student", "minutes_this_week", "streak_days", "mastered_skills", "needs_attention", "last_active", ...heatmap.skills.map((skill) => `${skill.name} (p_known)`)];
+  const rows = insights.students.map((student) => [
+    student.displayName,
+    student.minutesThisWeek,
+    student.streak,
+    student.masteredSkills,
+    student.needsAttention,
+    student.lastActiveAt ? student.lastActiveAt.slice(0, 10) : null,
+    ...heatmap.skills.map((skill) => {
+      const cell = heatmap.cells.find((c) => c.userId === student.userId && c.skillId === skill.id);
+      return cell && cell.band !== "new" ? cell.pKnown.toFixed(2) : null;
+    }),
+  ]);
+  return [`# ${classroom.name}`, header, ...rows].map((row) => (typeof row === "string" ? row : row.map(csvCell).join(","))).join("\n");
+}
+
+/* ------------------------------------------------------------------- sync */
+
+type SyncPushInput = import("@learnly/shared").SyncPushInput;
+type SyncResponse = import("@learnly/shared").SyncResponse;
+type SyncOpResult = import("@learnly/shared").SyncOpResult;
+
+const appliedOps = new Set<string>();
+
+export function applySync(userId: string, input: SyncPushInput): SyncResponse {
+  const results: SyncOpResult[] = input.operations.map((op) => {
+    if (appliedOps.has(op.opId)) return { opId: op.opId, status: "duplicate" };
+    try {
+      if (op.type === "attempt.create") recordAttempt(userId, op.payload);
+      else if (op.type === "lesson.complete") completeLesson(userId, op.payload.lessonId, op.payload.durationMs);
+      else updatePreferences(userId, op.payload);
+      appliedOps.add(op.opId);
+      return { opId: op.opId, status: "applied" };
+    } catch (error) {
+      return { opId: op.opId, status: "rejected", reason: error instanceof Error ? error.message : "Unknown error" };
+    }
+  });
+  const summary = progressSummary(userId);
+  return {
+    results,
+    cursor: String(Date.now()),
+    serverTime: new Date().toISOString(),
+    mastery: { upserted: Object.values(masteryOf(userId)), deletedIds: [] },
+    lessons: { upserted: [], deletedIds: [] },
+    progress: { totalXp: summary.totalXp, streak: summary.streak.current, freezesAvailable: summary.streak.freezesAvailable },
+  };
+}
