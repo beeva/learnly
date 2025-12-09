@@ -31,3 +31,17 @@ export function authenticate({ optional = false }: { optional?: boolean } = {}):
 export const requireAuth = authenticate();
 export const optionalAuth = authenticate({ optional: true });
 
+/** Must run after `requireAuth`. Admins pass every role check. */
+export function requireRole(...roles: Role[]): RequestHandler {
+  return (req, _res, next) => {
+    if (!req.auth) {
+      next(unauthorized());
+      return;
+    }
+    if (req.auth.role !== "admin" && !roles.includes(req.auth.role)) {
+      next(forbidden(roles.includes("educator") ? "This area is just for educators." : undefined));
+      return;
+    }
+    next();
+  };
+}
