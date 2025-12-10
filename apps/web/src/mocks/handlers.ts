@@ -214,3 +214,90 @@ export const handlers = [
   ),
 ];
 
+type JoinInput = { joinCode: string };
+
+handlers.push(
+  http.get("*/readyz", () => HttpResponse.json({ status: "ok", db: "mock" })),
+
+  http.get(
+    `${API}/classrooms`,
+    route(({ request }) => ({ classrooms: db.classroomsFor(requireUser(request)) })),
+  ),
+  http.post(
+    `${API}/classrooms`,
+    route(async ({ request }) => {
+      const user = requireUser(request);
+      requireRole(user, ["educator", "admin"]);
+      const { createClassroomSchema } = await import("@learnly/shared");
+      const input = await readBody(request, createClassroomSchema);
+      return HttpResponse.json({ classroom: db.createClassroom(user, input) }, { status: 201 });
+    }),
+  ),
+  http.post(
+    `${API}/classrooms/join`,
+    route(async ({ request }) => {
+      const user = requireUser(request);
+      requireRole(user, ["student"]);
+      const { joinClassroomSchema } = await import("@learnly/shared");
+      const input: JoinInput = await readBody(request, joinClassroomSchema);
+      return { classroom: db.joinClassroom(user, input.joinCode) };
+    }),
+  ),
+  http.get(
+    `${API}/classrooms/:id/members`,
+    route(({ request, params }) => {
+      const user = requireUser(request);
+      requireRole(user, ["educator", "admin"]);
+      return { members: db.classroomMembers(user, param(params, "id")) };
+    }),
+  ),
+  http.get(
+    `${API}/classrooms/:id/insights`,
+    route(({ request, params }) => {
+      const user = requireUser(request);
+      requireRole(user, ["educator", "admin"]);
+      const url = new URL(request.url);
+      const to = url.searchParams.get("to") ?? db.dayKey();
+      const from = url.searchParams.get("from") ?? db.dayKey(new Date(Date.parse(to) - 6 * 86_400_000));
+      return db.classroomInsights(user, param(params, "id"), { from, to });
+    }),
+  ),
+  http.get(
+    `${API}/classrooms/:id/heatmap`,
+    route(({ request, params }) => {
+      const user = requireUser(request);
+      requireRole(user, ["educator", "admin"]);
+      return db.classroomHeatmap(user, param(params, "id"));
+    }),
+  ),
+  http.get(
+    `${API}/classrooms/:id/export.csv`,
+    route(({ request, params }) => {
+      const user = requireUser(request);
+      requireRole(user, ["educator", "admin"]);
+      return new HttpResponse(db.classroomCsv(user, param(params, "id")), {
+        headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": 'attachment; filename="classroom.csv"' },
+      });
+    }),
+  ),
+
+  http.post(
+    `${API}/sync`,
+    route(async ({ request }) => {
+      const user = requireUser(request);
+      const { syncPushSchema } = await import("@learnly/shared");
+      const input = await readBody(request, syncPushSchema);
+      return db.applySync(user.id, input);
+    }),
+  ),
+
+  http.post(
+    `${API}/events`,
+    route(async ({ request }) => {
+      const body = (await request.json().catch(() => null)) as { events?: unknown[] } | null;
+      if (!body || !Array.isArray(body.events)) throw new db.MockHttpError(400, "validation_failed", "Expected an events array.");
+      if (import.meta.env.DEV) console.debug(`[mock api] received ${body.events.length} analytics event(s)`, body.events);
+      return new HttpResponse(null, { status: 202 });
+    }),
+  ),
+);
