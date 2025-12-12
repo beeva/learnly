@@ -157,3 +157,43 @@ export function useUpdatePreferences() {
   });
 }
 
+type CreateClassroomInput = { name: string; courseId: string };
+
+export function useClassrooms(enabled = true) {
+  return useQuery({ queryKey: client.educatorKeys.classrooms, queryFn: client.educatorApi.classrooms, enabled });
+}
+
+export function useCreateClassroom() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ["classroom", "create"],
+    mutationFn: (input: CreateClassroomInput) => client.educatorApi.createClassroom(input),
+    onSuccess: ({ classroom }) => {
+      queryClient.setQueryData<{ classrooms: (typeof classroom)[] }>(client.educatorKeys.classrooms, (current) =>
+        current ? { classrooms: [classroom, ...current.classrooms] } : { classrooms: [classroom] },
+      );
+    },
+  });
+}
+
+export function useJoinClassroom() {
+  return useMutation({ mutationKey: ["classroom", "join"], mutationFn: (joinCode: string) => client.educatorApi.joinClassroom(joinCode) });
+}
+
+export function useClassroomMembers(classroomId: string) {
+  return useQuery({ queryKey: client.educatorKeys.members(classroomId), queryFn: () => client.educatorApi.members(classroomId) });
+}
+
+export function useClassroomInsights(classroomId: string, range: client.InsightsRange) {
+  return useQuery({
+    queryKey: client.educatorKeys.insights(classroomId, range),
+    queryFn: () => client.educatorApi.insights(classroomId, range),
+    // Changing the date range shouldn't flash the dashboard back to skeletons.
+    placeholderData: (previous) => previous,
+    staleTime: 60_000,
+  });
+}
+
+export function useClassroomHeatmap(classroomId: string) {
+  return useQuery({ queryKey: client.educatorKeys.heatmap(classroomId), queryFn: () => client.educatorApi.heatmap(classroomId), staleTime: 60_000 });
+}
