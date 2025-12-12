@@ -62,3 +62,35 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   return <Fragment key={locale}>{children}</Fragment>;
 }
 
+type LocaleCode = import("@learnly/shared").LocaleCode;
+
+const LOCALE_KEY = "learnly.locale";
+
+const loaders: Record<Exclude<LocaleCode, "en">, () => Promise<Record<string, string>>> = {
+  es: () => import("./messages/es").then((module) => flattenCatalog(module)),
+  fil: () => import("./messages/fil").then((module) => flattenCatalog(module)),
+};
+
+/** Fetch (once) and activate a locale. Catalogs are split so English users never download them. */
+export async function setLocale(locale: LocaleCode): Promise<void> {
+  if (locale !== "en" && !catalogs.has(locale)) registerCatalog(locale, await loaders[locale]());
+  activateLocale(locale);
+  try {
+    localStorage.setItem(LOCALE_KEY, locale);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function storedLocale(): string | null {
+  try {
+    return localStorage.getItem(LOCALE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** For dynamic keys (e.g. nav ids) that may not exist in every catalog. */
+export function translateOr(key: string, fallback: string): string {
+  return catalogs.get(current)?.[key] ?? (english as Record<string, string>)[key] ?? fallback;
+}
