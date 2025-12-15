@@ -97,3 +97,22 @@ import { syncModule } from "./modules/sync/index.js";
 
 featureModules.push(syncModule);
 
+import { auditModule } from "./modules/audit/index.js";
+import { classroomsModule } from "./modules/classrooms/index.js";
+import { engineV2Module, spacedReviewModule } from "./modules/engine-v2/index.js";
+import { eventsModule } from "./modules/events/index.js";
+import { opsInstrumentationModule, opsModule } from "./modules/ops/index.js";
+import { jobsModule } from "./jobs/scheduler.js";
+
+// Ops goes first so compression and request metrics wrap every route; its
+// instrumentation goes last so it can decorate services every other module registered.
+featureModules.unshift(opsModule);
+featureModules.push(
+  engineV2Module,
+  spacedReviewModule,
+  auditModule,
+  classroomsModule,
+  eventsModule,
+  jobsModule,
+  opsInstrumentationModule,
+);
