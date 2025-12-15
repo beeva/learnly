@@ -20,3 +20,14 @@ process.on("unhandledRejection", (reason) => {
   logger.error({ err: reason }, "unhandled promise rejection");
 });
 
+import { installGracefulShutdown } from "./lib/shutdown.js";
+
+const features = container.resolve("features");
+if (features.JOBS_ENABLED) container.resolve("nightlyScheduler").start();
+
+installGracefulShutdown({
+  server,
+  container,
+  logger,
+  timeoutMs: features.SHUTDOWN_TIMEOUT_MS,
+});
