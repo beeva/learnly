@@ -256,3 +256,9 @@ export default function ProfileScreen() {
   );
 }
 
+PROFILE_LINKS.unshift(
+  { key: "settings", icon: "settings", label: "Settings", hint: "Goal, language, reminders", href: "/settings" },
+  { key: "classroom", icon: "users", label: "Join a class", hint: "Use the code from your teacher", href: "/join-classroom" },
+  { key: "downloads", icon: "download", label: "Downloaded lessons", href: "/downloads" },
+  { key: "sync", icon: "refresh", label: "Sync & offline data", href: "/sync-status" },
+);
