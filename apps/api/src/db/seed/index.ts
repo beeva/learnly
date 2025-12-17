@@ -190,3 +190,163 @@ import { readingDetectives } from "./reading.js";
 
 SEED_COURSES.push(preAlgebra, readingDetectives);
 
+import { applyAttempt, initialMastery } from "@learnly/adaptive-engine";
+import { xpForAttempt, type SkillMastery } from "@learnly/shared";
+import { earthScience } from "./earth-science.js";
+
+SEED_COURSES.push(earthScience);
+
+/**
+ * A demo educator with a classroom of three learners and a week of realistic activity,
+ * so the insights dashboard has something to show on a fresh environment.
+ */
+SEED_STEPS.push(async ({ db, log }) => {
+  const educatorId = await upsertDemoUser(db, {
+    email: "ms.rivera@demo.learnly.app",
+    displayName: "Ms. Rivera",
+    role: "educator",
+    gradeBand: null,
+    avatarColor: "#5B5BD6",
+  });
+  const learners = [
+    { email: "maya@demo.learnly.app", displayName: "Maya", accuracy: 0.85, avatarColor: "#FF7A59" },
+    { email: "jonah@demo.learnly.app", displayName: "Jonah", accuracy: 0.6, avatarColor: "#2FB67C" },
+    { email: "priya@demo.learnly.app", displayName: "Priya", accuracy: 0.35, avatarColor: "#F5A524" },
+  ];
+  const course = materializeCourse(fractions);
+  const classroomId = seedId("classroom", "rivera-fractions");
+  await db.query(
+    `insert into classrooms (id, name, educator_id, course_id, join_code)
+     values ($1, $2, $3, $4, $5)
+     on conflict (id) do update set name = excluded.name`,
+    [classroomId, "Room 12 · Fractions", educatorId, course.course.id, "FRAC24"],
+  );
+
+  const practisedSkills = new Set(["FR.1", "FR.2", "FR.3", "FR.5"].map((code) => seedId("skill", code)));
+  const items = course.items.filter((item) => practisedSkills.has(item.skillId));
+  const perDay = 6;
+  const days = Math.ceil(items.length / perDay);
+  const now = Date.now();
+
+  for (const [learnerIndex, learner] of learners.entries()) {
+    const userId = await upsertDemoUser(db, { ...learner, role: "student", gradeBand: "3-5" });
+    await db.query("insert into classroom_members (classroom_id, user_id) values ($1, $2) on conflict do nothing", [
+      classroomId,
+      userId,
+    ]);
+    // Deterministic pseudo-random answers so the dashboard looks the same on every seed.
+    let state = 17 + learnerIndex * 31;
+    const random = () => {
+      state = (state * 1_103_515_245 + 12_345) % 2_147_483_648;
+      return state / 2_147_483_648;
+    };
+    const mastery = new Map<string, SkillMastery>();
+    const activity = new Map<string, { seconds: number; answered: number; correct: number }>();
+    let totalXp = 0;
+
+    // Oldest first, so mastery evolves in the same order the answers were given.
+    for (const [index, item] of items.entries()) {
+      const correct = random() < learner.accuracy;
+      const durationMs = 20_000 + Math.round(random() * 40_000);
+      const answeredAt = new Date(now - (days - Math.floor(index / perDay)) * 86_400_000 + index * 180_000);
+      const before = mastery.get(item.skillId) ?? initialMastery(item.skillId);
+      await db.query(
+        `insert into attempts (user_id, item_id, skill_id, client_attempt_id, response, correct, hints_used,
+                               duration_ms, ability_before, answered_at)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         on conflict do nothing`,
+        [
+          userId,
+          item.id,
+          item.skillId,
+          seedId("demo-attempt", `${learner.email}:${item.id}`),
+          JSON.stringify(correct ? correctDemoResponse(item) : wrongDemoResponse(item)),
+          correct,
+          correct ? 0 : 1,
+          durationMs,
+          before.ability,
+          answeredAt.toISOString(),
+        ],
+      );
+      mastery.set(
+        item.skillId,
+        applyAttempt(before, { difficulty: item.difficulty, correct, hintsUsed: correct ? 0 : 1, answeredAt: answeredAt.toISOString() }),
+      );
+      const day = answeredAt.toISOString().slice(0, 10);
+      const today = activity.get(day) ?? { seconds: 0, answered: 0, correct: 0 };
+      activity.set(day, {
+        seconds: today.seconds + Math.round(durationMs / 1000),
+        answered: today.answered + 1,
+        correct: today.correct + (correct ? 1 : 0),
+      });
+      totalXp += xpForAttempt(correct, correct ? 0 : 1, true);
+    }
+
+    for (const skillState of mastery.values()) {
+      await db.query(
+        `insert into skill_mastery (user_id, skill_id, p_known, ability, band, attempts, last_practiced_at)
+         values ($1, $2, $3, $4, $5, $6, $7)
+         on conflict (user_id, skill_id) do update set p_known = excluded.p_known, ability = excluded.ability,
+           band = excluded.band, attempts = excluded.attempts, last_practiced_at = excluded.last_practiced_at,
+           updated_at = now()`,
+        [
+          userId,
+          skillState.skillId,
+          skillState.pKnown,
+          skillState.ability,
+          skillState.band,
+          skillState.attempts,
+          skillState.lastPracticedAt,
+        ],
+      );
+    }
+    for (const [day, totals] of activity) {
+      await db.query(
+        `insert into daily_activity (user_id, day, active_seconds, items_answered, items_correct)
+         values ($1, $2, $3, $4, $5)
+         on conflict (user_id, day) do update set active_seconds = excluded.active_seconds,
+           items_answered = excluded.items_answered, items_correct = excluded.items_correct`,
+        [userId, day, totals.seconds, totals.answered, totals.correct],
+      );
+    }
+    const lastDay = [...activity.keys()].sort().at(-1) ?? null;
+    await db.query(
+      `insert into user_progress (user_id, total_xp, streak_current, streak_longest, last_active_day)
+       values ($1, $2, $3, $3, $4)
+       on conflict (user_id) do update set total_xp = excluded.total_xp, streak_current = excluded.streak_current,
+         streak_longest = greatest(user_progress.streak_longest, excluded.streak_longest),
+         last_active_day = excluded.last_active_day`,
+      [userId, totalXp, activity.size, lastDay],
+    );
+  }
+  log("  demo educator: ms.rivera@demo.learnly.app (classroom code FRAC24)");
+});
+
+type DemoItem = MaterializedCourse["items"][number];
+
+function correctDemoResponse(item: DemoItem): unknown {
+  switch (item.kind) {
+    case "multiple_choice":
+      return { kind: item.kind, choiceId: item.answer };
+    case "numeric":
+      return { kind: item.kind, value: item.answer };
+    case "short_text":
+      return { kind: item.kind, text: item.acceptedAnswers[0] ?? "" };
+    case "ordering":
+      return { kind: item.kind, order: item.answer };
+  }
+}
+
+/** The most tempting wrong answer, so the misconception view has a clear signal. */
+function wrongDemoResponse(item: DemoItem): unknown {
+  switch (item.kind) {
+    case "multiple_choice":
+      return { kind: item.kind, choiceId: item.choices.find((choice) => choice.id !== item.answer)?.id ?? "b" };
+    case "numeric":
+      return { kind: item.kind, value: item.answer + 1 };
+    case "short_text":
+      return { kind: item.kind, text: "2/8" };
+    case "ordering":
+      return { kind: item.kind, order: [...item.answer].reverse() };
+  }
+}
