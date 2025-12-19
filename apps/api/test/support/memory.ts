@@ -621,3 +621,335 @@ installers.push((container, store) => {
   container.register("syncRepository", () => store.sync).register("catalogChangeFeed", () => store.changes);
 });
 
+import type { BktParams, ReviewState } from "@learnly/adaptive-engine";
+import type { Classroom, ClassroomId, ClassroomMember } from "@learnly/shared";
+import type { CalibrationResponse, ItemCalibrationTarget, JobRepository, JobStatus } from "../../src/jobs/repository.js";
+import type { AuditRecord, AuditRepository } from "../../src/modules/audit/repository.js";
+import type { NewClassroom, ClassroomRepository } from "../../src/modules/classrooms/repository.js";
+import type { BktParamsRepository, FitStats, ReviewStateRepository } from "../../src/modules/engine-v2/repository.js";
+import type { AnalyticsEvent, EventRepository } from "../../src/modules/events/repository.js";
+import type { InsightAttempt } from "../../src/modules/insights/compute.js";
+import type { InsightsRepository, UserMastery } from "../../src/modules/insights/repository.js";
+import type { FeatureFlags } from "../../src/config/features.js";
+
+export class MemoryClassrooms implements ClassroomRepository {
+  readonly rows = new Map<ClassroomId, Omit<Classroom, "studentCount">>();
+  readonly memberships = new Map<ClassroomId, Map<UserId, string>>();
+
+  constructor(
+    private readonly users: MemoryUsers,
+    private readonly clock: Clock,
+  ) {}
+
+  private view(row: Omit<Classroom, "studentCount">): Classroom {
+    return { ...clone(row), studentCount: this.memberships.get(row.id)?.size ?? 0 };
+  }
+
+  async create(input: NewClassroom): Promise<Classroom | null> {
+    if ([...this.rows.values()].some((row) => row.joinCode === input.joinCode)) return null;
+    const row = {
+      id: randomUUID() as ClassroomId,
+      name: input.name,
+      educatorId: input.educatorId,
+      courseId: input.courseId,
+      joinCode: input.joinCode,
+      createdAt: this.clock.now().toISOString(),
+    };
+    this.rows.set(row.id, row);
+    return this.view(row);
+  }
+
+  async findById(id: ClassroomId): Promise<Classroom | null> {
+    const row = this.rows.get(id);
+    return row ? this.view(row) : null;
+  }
+
+  async findByJoinCode(joinCode: string): Promise<Classroom | null> {
+    const row = [...this.rows.values()].find((r) => r.joinCode === joinCode);
+    return row ? this.view(row) : null;
+  }
+
+  async listForEducator(educatorId: UserId): Promise<Classroom[]> {
+    return [...this.rows.values()].filter((row) => row.educatorId === educatorId).map((row) => this.view(row));
+  }
+
+  async listForStudent(userId: UserId): Promise<Classroom[]> {
+    return [...this.rows.values()].filter((row) => this.memberships.get(row.id)?.has(userId)).map((row) => this.view(row));
+  }
+
+  async listAll(): Promise<Classroom[]> {
+    return [...this.rows.values()].map((row) => this.view(row));
+  }
+
+  async addMember(classroomId: ClassroomId, userId: UserId): Promise<boolean> {
+    const members = this.memberships.get(classroomId) ?? new Map<UserId, string>();
+    if (members.has(userId)) return false;
+    members.set(userId, this.clock.now().toISOString());
+    this.memberships.set(classroomId, members);
+    return true;
+  }
+
+  async members(classroomId: ClassroomId): Promise<ClassroomMember[]> {
+    const members = this.memberships.get(classroomId) ?? new Map<UserId, string>();
+    return [...members.entries()]
+      .flatMap(([userId, joinedAt]) => {
+        const user = this.users.rows.get(userId)?.user;
+        return user
+          ? [{ classroomId, userId, displayName: user.displayName, avatarColor: user.avatarColor, joinedAt }]
+          : [];
+      })
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }
+}
+
+export class MemoryInsights implements InsightsRepository {
+  constructor(private readonly store: MemoryStore) {}
+
+  async attempts(userIds: UserId[], skillIds: SkillId[], from: string, to: string): Promise<InsightAttempt[]> {
+    const start = Date.parse(from);
+    const end = Date.parse(to);
+    return this.store.attempts
+      .ordered((row) => {
+        const at = Date.parse(row.answeredAt);
+        return userIds.includes(row.userId) && skillIds.includes(row.skillId) && at >= start && at < end;
+      })
+      .map(({ userId, itemId, skillId, correct, response, hintsUsed, durationMs, answeredAt }) => ({
+        userId,
+        itemId,
+        skillId,
+        correct,
+        response,
+        hintsUsed,
+        durationMs,
+        answeredAt,
+      }));
+  }
+
+  async mastery(userIds: UserId[], skillIds: SkillId[]): Promise<UserMastery[]> {
+    return [...this.store.mastery.rows.values()]
+      .filter((row) => userIds.includes(row.userId) && skillIds.includes(row.mastery.skillId))
+      .map((row) => ({ ...clone(row.mastery), userId: row.userId }));
+  }
+
+  async minutes(userIds: UserId[], fromDay: string, toDay: string): Promise<Map<UserId, number>> {
+    const totals = new Map<UserId, number>();
+    for (const row of this.store.progress.activity.values()) {
+      if (userIds.includes(row.userId) && row.day >= fromDay && row.day <= toDay) {
+        totals.set(row.userId, (totals.get(row.userId) ?? 0) + row.seconds);
+      }
+    }
+    return new Map([...totals.entries()].map(([userId, seconds]) => [userId, Math.round(seconds / 60)]));
+  }
+
+  async streaks(userIds: UserId[]): Promise<Map<UserId, StreakState>> {
+    const result = new Map<UserId, StreakState>();
+    for (const userId of userIds) {
+      const record = this.store.progress.records.get(userId);
+      if (record) result.set(userId, clone(record.streak));
+    }
+    return result;
+  }
+
+  async lastActive(userIds: UserId[]): Promise<Map<UserId, string>> {
+    const result = new Map<UserId, string>();
+    for (const row of this.store.attempts.ordered((r) => userIds.includes(r.userId))) result.set(row.userId, row.answeredAt);
+    return result;
+  }
+
+  async completedLessons(userIds: UserId[], courseId: CourseId): Promise<Map<UserId, number>> {
+    const courseSkills = new Set(
+      this.store.catalog.skills
+        .filter((skill) => this.store.catalog.units.some((unit) => unit.id === skill.unitId && unit.courseId === courseId))
+        .map((skill) => skill.id),
+    );
+    const result = new Map<UserId, number>();
+    for (const userId of userIds) {
+      const lessons = new Set(
+        this.store.progress.completions
+          .filter((c) => c.userId === userId && courseSkills.has(this.store.catalog.lessons.get(c.lessonId)?.skillId as SkillId))
+          .map((c) => c.lessonId),
+      );
+      if (lessons.size > 0) result.set(userId, lessons.size);
+    }
+    return result;
+  }
+
+  async lessonCount(courseId: CourseId): Promise<number> {
+    const skills = new Set(
+      this.store.catalog.skills
+        .filter((skill) => this.store.catalog.units.some((unit) => unit.id === skill.unitId && unit.courseId === courseId))
+        .map((skill) => skill.id),
+    );
+    return [...this.store.catalog.lessons.values()].filter((lesson) => skills.has(lesson.skillId)).length;
+  }
+}
+
+export class MemoryEvents implements EventRepository {
+  readonly rows: (AnalyticsEvent & { userId: UserId | null })[] = [];
+
+  async insertBatch(userId: UserId | null, events: AnalyticsEvent[]): Promise<number> {
+    this.rows.push(...events.map((event) => ({ ...clone(event), userId })));
+    return events.length;
+  }
+}
+
+export class MemoryAudit implements AuditRepository {
+  readonly rows: AuditRecord[] = [];
+
+  async append(record: AuditRecord): Promise<void> {
+    this.rows.push(clone(record));
+  }
+
+  actions(): string[] {
+    return this.rows.map((row) => row.action);
+  }
+}
+
+export class MemoryReviewStates implements ReviewStateRepository {
+  readonly rows = new Map<string, ReviewState>();
+
+  async get(userId: UserId, skillId: SkillId): Promise<ReviewState | null> {
+    const row = this.rows.get(`${userId}:${skillId}`);
+    return row ? clone(row) : null;
+  }
+
+  async save(userId: UserId, skillId: SkillId, state: ReviewState): Promise<void> {
+    this.rows.set(`${userId}:${skillId}`, clone(state));
+  }
+}
+
+export class MemoryBktParams implements BktParamsRepository {
+  readonly rows = new Map<SkillId, { params: BktParams; stats: FitStats; at: string }>();
+
+  async forSkill(skillId: SkillId): Promise<BktParams | null> {
+    const row = this.rows.get(skillId);
+    return row ? clone(row.params) : null;
+  }
+
+  async save(skillId: SkillId, params: BktParams, stats: FitStats, at: string): Promise<void> {
+    this.rows.set(skillId, { params: clone(params), stats, at });
+  }
+}
+
+export class MemoryJobs implements JobRepository {
+  readonly runs: { id: number; job: string; startedAt: string; status: "running" | JobStatus; details: Record<string, unknown> }[] = [];
+  readonly authored = new Map<ItemId, number>();
+
+  constructor(private readonly store: MemoryStore) {}
+
+  private since(since: string) {
+    return (row: StoredAttempt) => Date.parse(row.answeredAt) >= Date.parse(since);
+  }
+
+  async skillsWithAnswers(since: string): Promise<SkillId[]> {
+    return [...new Set(this.store.attempts.ordered(this.since(since)).map((row) => row.skillId))];
+  }
+
+  async answerSequences(skillId: SkillId, since: string, maxLearners: number): Promise<boolean[][]> {
+    const byUser = new Map<UserId, boolean[]>();
+    for (const row of this.store.attempts.ordered((r) => r.skillId === skillId && this.since(since)(r))) {
+      byUser.set(row.userId, [...(byUser.get(row.userId) ?? []), row.correct]);
+    }
+    return [...byUser.values()].sort((a, b) => b.length - a.length).slice(0, maxLearners);
+  }
+
+  async itemsWithResponses(since: string, minResponses: number): Promise<ItemCalibrationTarget[]> {
+    const counts = new Map<ItemId, number>();
+    for (const row of this.store.attempts.ordered(this.since(since))) counts.set(row.itemId, (counts.get(row.itemId) ?? 0) + 1);
+    return [...counts.entries()].flatMap(([itemId, responses]) => {
+      const item = this.store.catalog.items.get(itemId);
+      if (!item || responses < minResponses) return [];
+      return [{ itemId, authored: this.authored.get(itemId) ?? item.difficulty, current: item.difficulty, responses }];
+    });
+  }
+
+  async responsesForItem(itemId: ItemId, since: string, limit: number): Promise<CalibrationResponse[]> {
+    const firstByUser = new Map<UserId, StoredAttempt>();
+    for (const row of this.store.attempts.ordered((r) => r.itemId === itemId && this.since(since)(r))) {
+      if (!firstByUser.has(row.userId)) firstByUser.set(row.userId, row);
+    }
+    return [...firstByUser.values()].slice(0, limit).map((row) => ({ ability: row.abilityBefore, correct: row.correct }));
+  }
+
+  async saveItemDifficulty(itemId: ItemId, difficulty: number): Promise<void> {
+    const item = this.store.catalog.items.get(itemId);
+    if (!item) return;
+    if (!this.authored.has(itemId)) this.authored.set(itemId, item.difficulty);
+    item.difficulty = difficulty;
+  }
+
+  async pruneSyncOperations(before: string): Promise<number> {
+    let pruned = 0;
+    for (const [key, op] of this.store.sync.operations) {
+      if (Date.parse(op.createdAt) < Date.parse(before)) {
+        this.store.sync.operations.delete(key);
+        pruned += 1;
+      }
+    }
+    return pruned;
+  }
+
+  async pruneAnalyticsEvents(): Promise<number> {
+    return 0;
+  }
+
+  async claimRun(job: string, at: string, minHoursBetween: number): Promise<number | null> {
+    if (this.runs.some((run) => run.job === job && run.status === "running")) return null;
+    const recent = this.runs.some(
+      (run) => run.job === job && run.status === "succeeded" && Date.parse(at) - Date.parse(run.startedAt) < minHoursBetween * 3_600_000,
+    );
+    if (recent) return null;
+    const id = this.runs.length + 1;
+    this.runs.push({ id, job, startedAt: at, status: "running", details: {} });
+    return id;
+  }
+
+  async finishRun(id: number, status: JobStatus, details: Record<string, unknown>): Promise<void> {
+    const run = this.runs.find((r) => r.id === id);
+    if (run) Object.assign(run, { status, details });
+  }
+}
+
+export const TEST_FEATURES: FeatureFlags = {
+  ENGINE_VERSION: "v2",
+  JOBS_ENABLED: false,
+  NIGHTLY_JOBS_HOUR_UTC: 3,
+  METRICS_TOKEN: undefined,
+  SHUTDOWN_TIMEOUT_MS: 5_000,
+};
+
+export interface MemoryStore {
+  classrooms: MemoryClassrooms;
+  insights: MemoryInsights;
+  events: MemoryEvents;
+  audit: MemoryAudit;
+  reviews: MemoryReviewStates;
+  bkt: MemoryBktParams;
+  jobs: MemoryJobs;
+  ready: { healthy: boolean };
+}
+
+installers.push((container, store) => {
+  store.classrooms = new MemoryClassrooms(store.users, store.clock);
+  store.insights = new MemoryInsights(store);
+  store.events = new MemoryEvents();
+  store.audit = new MemoryAudit();
+  store.reviews = new MemoryReviewStates();
+  store.bkt = new MemoryBktParams();
+  store.jobs = new MemoryJobs(store);
+  store.ready = { healthy: true };
+  container
+    .register("features", () => ({ ...TEST_FEATURES }))
+    .register("classroomRepository", () => store.classrooms)
+    .register("insightsRepository", () => store.insights)
+    .register("eventRepository", () => store.events)
+    .register("auditRepository", () => store.audit)
+    .register("reviewStateRepository", () => store.reviews)
+    .register("bktParamsRepository", () => store.bkt)
+    .register("jobRepository", () => store.jobs)
+    .register("readinessProbe", () => ({
+      check: async () => {
+        if (!store.ready.healthy) throw new Error("database unreachable");
+      },
+    }));
+});
