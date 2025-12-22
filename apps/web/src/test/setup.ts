@@ -99,3 +99,15 @@ afterEach(() => {
   localStorage.clear();
 });
 
+const { server } = await import("../mocks/server");
+const mockDb = await import("../mocks/db");
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+
+afterEach(() => {
+  server.resetHandlers();
+  mockDb.resetDb();
+  mockDb.resetEducatorDb();
+});
+
+afterAll(() => server.close());
