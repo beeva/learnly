@@ -45,3 +45,38 @@ export const opsModule: FeatureModule = {
   ],
 };
 
+/** Registered last so it can wrap services every other module has registered or decorated. */
+export const opsInstrumentationModule: FeatureModule = {
+  name: "ops-instrumentation",
+  register(container) {
+    container.decorate("attemptSubmitter", (inner, c): AttemptSubmitter => {
+      const metrics = c.resolve("metrics");
+      return {
+        async submit(userId, input) {
+          const outcome = await inner.submit(userId, input);
+          if (!outcome.replayed) {
+            metrics.attempts.inc({ kind: outcome.item.kind, correct: String(outcome.body.correct) });
+          }
+          return outcome;
+        },
+      };
+    });
+    container.decorate("syncRepository", (inner, c): SyncRepository => {
+      const metrics = c.resolve("metrics");
+      return {
+        async claim(userId, op) {
+          const claimed = await inner.claim(userId, op);
+          metrics.syncOperations.inc({ status: claimed ? "claimed" : "replayed" });
+          return claimed;
+        },
+        async reject(userId, op, reason) {
+          await inner.reject(userId, op, reason);
+          metrics.syncOperations.inc({ status: "rejected" });
+        },
+        find: (userId, opId) => inner.find(userId, opId),
+        touchDevice: (userId, deviceId, at) => inner.touchDevice(userId, deviceId, at),
+        masteryChangedSince: (userId, since) => inner.masteryChangedSince(userId, since),
+      };
+    });
+  },
+};
