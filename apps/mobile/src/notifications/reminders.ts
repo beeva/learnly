@@ -116,3 +116,46 @@ export async function rescheduleReminders(options: { practicedToday?: boolean; n
   return times.length;
 }
 
+/**
+ * Keeps reminders honest: practicing today cancels today's nudge, changing the
+ * time or quiet hours reschedules, and tapping a reminder opens Home.
+ */
+export function bootReminders(): () => void {
+  let disposed = false;
+  void loadLocalSettings()
+    .then(() => (disposed ? 0 : rescheduleReminders()))
+    .catch(() => undefined);
+
+  const unsubscribeOutbox = subscribeOutbox((event) => {
+    if (event.type !== "enqueued") return;
+    if (event.op.type !== "attempt.create" && event.op.type !== "lesson.complete") return;
+    const today = localDay(new Date());
+    void kvGet<string>(LAST_PRACTICE_KEY)
+      .then(async (last) => {
+        if (last === today) return;
+        await kvSet(LAST_PRACTICE_KEY, today);
+        await rescheduleReminders({ practicedToday: true });
+      })
+      .catch(() => undefined);
+  });
+
+  let previous = JSON.stringify(getLocalSettings().reminders);
+  const unsubscribeSettings = subscribeLocalSettings(() => {
+    const next = JSON.stringify(getLocalSettings().reminders);
+    if (next === previous) return;
+    previous = next;
+    void rescheduleReminders().catch(() => undefined);
+  });
+
+  const response = Notifications.addNotificationResponseReceivedListener((event) => {
+    const url = event.notification.request.content.data?.url;
+    if (typeof url === "string" && url.startsWith("/")) router.push(url);
+  });
+
+  return () => {
+    disposed = true;
+    unsubscribeOutbox();
+    unsubscribeSettings();
+    response.remove();
+  };
+}
