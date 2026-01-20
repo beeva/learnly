@@ -13,3 +13,13 @@ describe("bktUpdate", () => {
   });
 });
 
+describe("paramsForItem", () => {
+  it("uses 1/k for multiple choice", () => {
+    expect(paramsForItem(DEFAULT_BKT, "multiple_choice", 3).pGuess).toBeCloseTo(1 / 3);
+  });
+
+  it("makes free-response items hard to guess", () => {
+    expect(paramsForItem(DEFAULT_BKT, "numeric").pGuess).toBe(0.05);
+  });
+});
+
