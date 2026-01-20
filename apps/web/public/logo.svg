@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 96" role="img" aria-labelledby="title">
+  <title id="title">Learnly</title>
+  <defs>
+    <linearGradient id="mark" x1="10" y1="6" x2="86" y2="90" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7474E8"/>
+      <stop offset="1" stop-color="#4646C2"/>
+    </linearGradient>
+    <linearGradient id="dot" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FF9A7B"/>
+      <stop offset="1" stop-color="#FF7A59"/>
+    </linearGradient>
+  </defs>
+  <!-- Mark: an open book whose right page lifts into a rising path, ending in a coral "aha" dot. -->
+  <rect x="4" y="4" width="88" height="88" rx="26" fill="url(#mark)"/>
+  <path d="M21 33c8.3-3.6 17.2-3 25.2 2.4v35.6c-8-5.4-16.9-6-25.2-2.4z" fill="#FBFAF7"/>
+  <path d="M49.4 35.4c8-5.4 16.9-6 25.2-2.4v18.6" fill="none" stroke="#FBFAF7" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="74.6" cy="61.6" r="8" fill="url(#dot)"/>
+  <path d="M28 44.6c4.3-1 8.5-.6 12.2 1.2M28 53.6c4.3-1 8.5-.6 12.2 1.2" stroke="#5B5BD6" stroke-width="3.2" stroke-linecap="round" opacity=".5"/>
+  <!-- Wordmark drawn in Nunito Black, with a fallback stack for previews without the font. -->
+  <text x="116" y="66" font-family="Nunito, 'SF Pro Rounded', ui-rounded, system-ui, sans-serif" font-weight="900" font-size="54" letter-spacing="-1.5" fill="#1C1B29">Learnly</text>
+</svg>
