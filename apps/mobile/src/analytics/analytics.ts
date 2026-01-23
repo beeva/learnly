@@ -47,3 +47,85 @@ function track(name: string, props?: AnalyticsProps): void {
   void persist();
 }
 
+async function sendQueued(): Promise<number> {
+  await hydrate();
+  if (getLocalSettings().analyticsEnabled === false) {
+    queue = [];
+    await persist();
+    return 0;
+  }
+  let sent = 0;
+  while (queue.length > 0 && isOnlineNow()) {
+    const batch = queue.slice(0, BATCH_SIZE);
+    try {
+      await eventsApi.send(batch);
+    } catch {
+      break; // keep the events; try again on the next flush
+    }
+    queue = queue.slice(batch.length);
+    sent += batch.length;
+    await persist();
+  }
+  return sent;
+}
+
+function flush(): Promise<number> {
+  if (!flushing) {
+    flushing = sendQueued().finally(() => {
+      flushing = null;
+    });
+  }
+  return flushing;
+}
+
+function start(): () => void {
+  void hydrate();
+  track("app_opened");
+
+  const interval = setInterval(() => void flush(), FLUSH_INTERVAL_MS);
+  const appState = AppState.addEventListener("change", (next) => {
+    if (next === "background") void flush();
+  });
+
+  const unsubscribeOutbox = subscribeOutbox((event) => {
+    if (event.type !== "enqueued") return;
+    switch (event.op.type) {
+      case "attempt.create":
+        track("attempt_recorded", { offline: !isOnlineNow(), hints: event.op.payload.hintsUsed });
+        break;
+      case "lesson.complete":
+        track("lesson_completed", { minutes: Math.max(1, Math.round(event.op.payload.durationMs / 60_000)) });
+        break;
+      case "preferences.update":
+        track("preferences_changed", { fields: Object.keys(event.op.payload).sort().join(",") });
+        break;
+    }
+  });
+
+  let lastStatus = syncEngine.getState().status;
+  const unsubscribeSync = syncEngine.subscribe((state) => {
+    if (state.status === lastStatus) return;
+    if (lastStatus === "syncing" && state.status === "idle") track("sync_completed", { pending: state.pending });
+    if (state.status === "error") track("sync_failed", { failures: state.failures });
+    lastStatus = state.status;
+  });
+
+  return () => {
+    clearInterval(interval);
+    appState.remove();
+    unsubscribeOutbox();
+    unsubscribeSync();
+  };
+}
+
+export const analytics = {
+  track,
+  flush,
+  start,
+  /** Visible for tests and the debug screen. */
+  pending: () => queue.length,
+  reset: () => {
+    queue = [];
+    hydrated = null;
+  },
+};
