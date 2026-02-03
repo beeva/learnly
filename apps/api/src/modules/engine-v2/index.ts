@@ -32,3 +32,9 @@ export const engineV2Module: FeatureModule = {
   },
 };
 
+export const spacedReviewModule: FeatureModule = {
+  name: "spaced-review",
+  register(container) {
+    container.register("reviewPlanner", () => new DueReviewPlanner());
+  },
+};
