@@ -32,3 +32,41 @@ export function planQuarantine(
   return { expired, exhausted };
 }
 
+export function installSyncHardening(engine: SyncEngine = syncEngine, now: () => number = Date.now): () => void {
+  const offBefore = engine.onBeforeFlush(async () => {
+    const { expired, exhausted } = planQuarantine(await pendingEntries(), now());
+    await moveToDeadLetter(expired, "expired");
+    await moveToDeadLetter(exhausted, "retry_budget_exhausted");
+  });
+
+  const offResults = engine.onResults(async (results) => {
+    const rejected = results.filter((r) => r.status === "rejected");
+    const byReason = new Map<string, string[]>();
+    for (const r of rejected) {
+      const reason = r.reason ?? "rejected";
+      byReason.set(reason, [...(byReason.get(reason) ?? []), r.opId]);
+    }
+    for (const [reason, ids] of byReason) await moveToDeadLetter(ids, reason);
+  });
+
+  return () => {
+    offBefore();
+    offResults();
+  };
+}
+
+export const deadLettersKey = ["dead-letters"] as const;
+
+/** Dead letters for the sync status screen, refreshed whenever the outbox changes. */
+export function useDeadLetters() {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const unsubscribe = subscribeOutbox(() => {
+      void queryClient.invalidateQueries({ queryKey: deadLettersKey });
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, [queryClient]);
+  return useQuery({ queryKey: deadLettersKey, queryFn: listDeadLetters, networkMode: "always" });
+}
