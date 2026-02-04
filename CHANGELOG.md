@@ -48,3 +48,8 @@ All notable changes to Learnly are listed here, oldest release first.
 
 - Accessibility pass to WCAG 2.2 AA: focus management, live feedback regions, dynamic type
 - Rapid-guessing detection suggests a short break instead of penalising the student
+
+## 1.4.0 — 2026-03-20
+
+- Lesson load under 2s: route-level code splitting, next-lesson prefetch, ETag caching
+- Sync hardening: expired operations go to a dead-letter queue and sync status is shown in settings
