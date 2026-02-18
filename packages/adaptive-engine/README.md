@@ -40,3 +40,13 @@ simulation results.
 | `bkt.ts` | Knowledge tracing and per-skill parameter fitting |
 | `spaced.ts` | Review intervals and due-skill ranking |
 | `v2.ts` | `applyAttemptV2`, combining all of the above |
+
+## Benchmarks
+
+```bash
+pnpm --filter @learnly/adaptive-engine bench          # selection latency
+pnpm --filter @learnly/adaptive-engine exec tsx bench/simulate.ts   # v1 vs v2
+```
+
+Selection over a 1,000-item bank runs in well under a millisecond, so the mobile
+app can choose items locally without a network round-trip.
