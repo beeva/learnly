@@ -67,3 +67,17 @@ Insights are computed from `attempts` joined to `classroom_members` over a time 
 
 Analytics events (`POST /v1/events`) are batched by the clients and written to an
 append-only `analytics_events` table, partitioned by month.
+
+## Production topology
+
+```
+CloudFront ── S3 (web assets, immutable hashed files)
+     │
+     └── ALB ── ECS Fargate (api × 2–6, autoscaled on CPU)
+                    │
+                    ├── RDS Postgres 16 (Multi-AZ)
+                    └── EventBridge schedule → nightly jobs (BKT fit, difficulty calibration)
+```
+
+Engine v2 runs behind the `ENGINE_VERSION` flag; see
+[engine-v2.md](../packages/adaptive-engine/docs/engine-v2.md).
