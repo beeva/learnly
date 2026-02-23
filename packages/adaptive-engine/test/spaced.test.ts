@@ -17,3 +17,12 @@ describe("nextReview", () => {
   });
 });
 
+describe("qualityFromAttempt", () => {
+  it("grades clean, hinted and slow answers differently", () => {
+    expect(qualityFromAttempt(true, 0, 20_000)).toBe(5);
+    expect(qualityFromAttempt(true, 1, 20_000)).toBe(4);
+    expect(qualityFromAttempt(true, 0, 120_000)).toBe(4);
+    expect(qualityFromAttempt(false, 0, 20_000)).toBe(2);
+  });
+});
+
