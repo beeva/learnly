@@ -292,3 +292,13 @@ export const classroomApi = {
     request<{ classroom: JoinedClassroom }>("/v1/classrooms/join", { method: "POST", body: { joinCode } }),
 };
 
+export interface AnalyticsEvent {
+  name: string;
+  at: string;
+  props?: Record<string, string | number | boolean>;
+}
+
+export const eventsApi = {
+  /** Accepted with 202; analytics never blocks the learner, so callers swallow failures. */
+  send: (events: AnalyticsEvent[]) => request<void>("/v1/events", { method: "POST", body: { events } }),
+};
