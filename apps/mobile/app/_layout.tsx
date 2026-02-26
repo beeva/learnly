@@ -150,3 +150,9 @@ installWarmup();
 analytics.start();
 bootReminders();
 
+import type { ErrorBoundaryProps } from "expo-router";
+import { ErrorFallback } from "../src/components/ErrorFallback";
+
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  return <ErrorFallback error={error} retry={retry} />;
+}
