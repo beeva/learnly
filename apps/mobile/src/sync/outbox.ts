@@ -328,3 +328,10 @@ export async function discardDeadLetter(opId: string): Promise<void> {
   notify({ type: "changed" });
 }
 
+export async function pendingEntries(): Promise<OutboxEntry[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<OutboxRow>(
+    "SELECT seq, op_json, meta_json, state, tries, last_error, created_at FROM outbox WHERE state = 'pending' ORDER BY seq",
+  );
+  return rows.map(toEntry);
+}
