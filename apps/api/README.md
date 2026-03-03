@@ -136,3 +136,23 @@ unique index on `job_runs` guarantees one running instance). Run them by hand wi
 
 Only a classroom's own educator (or an admin) can see its data; anyone else gets a 404.
 
+
+## Operations
+
+| endpoint | purpose |
+| --- | --- |
+| `GET /healthz` | liveness — the process is up |
+| `GET /readyz` | readiness — Postgres reachable and not draining (503 otherwise) |
+| `GET /metrics` | Prometheus: request latency by route template, attempts, sync outcomes, jobs, pool usage |
+
+- **Logs** are structured JSON (pino) with a request id on every line (`x-request-id` is
+  honoured and echoed). Security-relevant actions (sign-ins, token reuse, classroom joins,
+  CSV exports) also go to the append-only `audit_log` table.
+- **Performance**: catalog responses carry `Cache-Control` + ETags (304 on revalidation)
+  and are gzip-compressed — lesson loads stay well under the 2 s budget on school wifi.
+- **Graceful shutdown**: on SIGTERM the task fails readiness, stops the scheduler, drains
+  in-flight requests, closes the pool, and force-exits after `SHUTDOWN_TIMEOUT_MS`.
+- **Docker**: `docker build -f apps/api/Dockerfile -t learnly-api .` from the repo root builds
+  a slim, non-root image. Run `node dist/migrate.js` as a one-off task before each rollout.
+- **Rate limits**: in-memory token buckets per IP — a global API budget plus a much stricter
+  one on credential endpoints. Behind the load balancer set `TRUST_PROXY=1`.
