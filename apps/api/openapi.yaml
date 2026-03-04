@@ -669,3 +669,52 @@ paths:
       responses:
         "200": { description: CSV, content: { text/csv: { schema: { type: string } } } }
 
+  /v1/events:
+    post:
+      tags: [analytics]
+      summary: Ingest a batch of product analytics events
+      security: [{}, { bearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [events]
+              properties:
+                events:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items:
+                    type: object
+                    required: [name, at]
+                    properties:
+                      name: { type: string, pattern: "^[a-z][a-z0-9_.]{1,63}$", examples: [lesson.opened] }
+                      at: { type: string, format: date-time }
+                      props:
+                        type: object
+                        maxProperties: 20
+                        additionalProperties: { type: [string, number, boolean] }
+      responses:
+        "202":
+          description: Accepted; events older than 7 days are dropped
+          content:
+            application/json:
+              schema: { type: object, properties: { accepted: { type: integer }, dropped: { type: integer } } }
+  /readyz:
+    get:
+      tags: [ops]
+      summary: Readiness probe (database reachable, not draining)
+      security: []
+      responses:
+        "200": { description: Ready }
+        "503": { description: Not ready }
+  /metrics:
+    get:
+      tags: [ops]
+      summary: Prometheus metrics (bearer METRICS_TOKEN when configured)
+      security: [{}, { bearer: [] }]
+      responses:
+        "200": { description: Prometheus text exposition format }
+        "401": { description: Missing or wrong scrape token }
