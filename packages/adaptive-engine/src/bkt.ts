@@ -45,3 +45,40 @@ export function paramsForItem(
   }
 }
 
+/**
+ * Fits slip/guess/transit for a skill from many learners' answer sequences using a
+ * simple grid search on log-likelihood. Runs nightly; sequences are short so a
+ * coarse grid is plenty and is far more stable than gradient methods here.
+ */
+export function fitBkt(sequences: boolean[][], grid = 9): BktParams {
+  let best = DEFAULT_BKT;
+  let bestLl = -Infinity;
+  const steps = (lo: number, hi: number) =>
+    Array.from({ length: grid }, (_, i) => lo + ((hi - lo) * i) / (grid - 1));
+  for (const pTransit of steps(0.02, 0.4)) {
+    for (const pSlip of steps(0.01, 0.3)) {
+      for (const pGuess of steps(0.01, 0.35)) {
+        const params = { pInit: DEFAULT_BKT.pInit, pTransit, pSlip, pGuess };
+        const ll = logLikelihood(sequences, params);
+        if (ll > bestLl) {
+          bestLl = ll;
+          best = params;
+        }
+      }
+    }
+  }
+  return best;
+}
+
+function logLikelihood(sequences: boolean[][], params: BktParams): number {
+  let ll = 0;
+  for (const seq of sequences) {
+    let pKnown = params.pInit;
+    for (const correct of seq) {
+      const pCorrect = pKnown * (1 - params.pSlip) + (1 - pKnown) * params.pGuess;
+      ll += Math.log(correct ? pCorrect : 1 - pCorrect);
+      pKnown = bktUpdate(pKnown, correct, params);
+    }
+  }
+  return ll;
+}
