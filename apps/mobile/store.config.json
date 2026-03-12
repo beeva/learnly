@@ -1,0 +1,60 @@
+{
+  "configVersion": 0,
+  "apple": {
+    "copyright": "2025 Learnly",
+    "categories": [
+      "EDUCATION"
+    ],
+    "info": {
+      "en-US": {
+        "title": "Learnly: Adaptive Learning",
+        "subtitle": "Lessons that adapt to you",
+        "description": "Learnly finds your starting point with a short, no-pressure placement check, then paces lessons and practice to exactly what you need next.\n\n- Adaptive practice that stays challenging but never discouraging\n- Mastery rings, streaks and XP that make progress visible\n- Works offline: download lessons and keep practicing anywhere, then sync when you're back online\n- Warm, encouraging feedback with worked explanations\n- Built for everyone: screen reader support, large text, reduced motion, English, Español and Filipino",
+        "keywords": [
+          "learning",
+          "math",
+          "fractions",
+          "reading",
+          "science",
+          "practice",
+          "offline",
+          "students",
+          "school"
+        ],
+        "marketingUrl": "https://beeva.site/portfolio/learnly",
+        "supportUrl": "https://beeva.site/portfolio/learnly",
+        "privacyPolicyUrl": "https://beeva.site/portfolio/learnly#privacy"
+      },
+      "es-MX": {
+        "title": "Learnly: aprendizaje adaptativo",
+        "subtitle": "Lecciones que se adaptan a ti",
+        "description": "Learnly encuentra tu punto de partida con una evaluación breve y sin presión, y adapta las lecciones y la práctica a lo que necesitas a continuación. Funciona sin conexión y sincroniza tu progreso cuando vuelves a estar en línea.",
+        "keywords": [
+          "aprender",
+          "matemáticas",
+          "fracciones",
+          "lectura",
+          "ciencias",
+          "práctica"
+        ],
+        "marketingUrl": "https://beeva.site/portfolio/learnly",
+        "supportUrl": "https://beeva.site/portfolio/learnly",
+        "privacyPolicyUrl": "https://beeva.site/portfolio/learnly#privacy"
+      }
+    },
+    "advisory": {
+      "unrestrictedWebAccess": false,
+      "gamblingSimulated": "NONE",
+      "violenceCartoonOrFantasy": "NONE"
+    },
+    "review": {
+      "firstName": "Learnly",
+      "lastName": "Review",
+      "email": "appreview@learnly.app",
+      "phone": "+1 415 555 0142",
+      "demoUsername": "review@learnly.app",
+      "demoPassword": "see-app-store-connect-notes",
+      "notes": "Use the demo account. Toggle airplane mode while practicing to see offline sync."
+    }
+  }
+}
