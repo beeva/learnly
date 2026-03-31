@@ -70,3 +70,75 @@ resource "aws_ecs_task_definition" "api" {
     }
   }])
 }
+resource "aws_lb" "api" {
+  name               = "${local.name}-api"
+  load_balancer_type = "application"
+  subnets            = module.vpc.public_subnets
+  security_groups    = [aws_security_group.alb.id]
+}
+
+resource "aws_lb_target_group" "api" {
+  name        = "${local.name}-api"
+  port        = 4000
+  protocol    = "HTTP"
+  target_type = "ip"
+  vpc_id      = module.vpc.vpc_id
+
+  health_check {
+    path    = "/readyz"
+    matcher = "200"
+  }
+
+  deregistration_delay = 20
+}
+
+resource "aws_ecs_service" "api" {
+  name            = "learnly-api"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.api.arn
+  desired_count   = var.api_desired_count
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets         = module.vpc.private_subnets
+    security_groups = [aws_security_group.api.id]
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.api.arn
+    container_name   = "api"
+    container_port   = 4000
+  }
+
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+
+  lifecycle {
+    ignore_changes = [desired_count]
+  }
+}
+
+resource "aws_appautoscaling_target" "api" {
+  service_namespace  = "ecs"
+  resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.api.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  min_capacity       = var.api_desired_count
+  max_capacity       = 6
+}
+
+resource "aws_appautoscaling_policy" "api_cpu" {
+  name               = "${local.name}-api-cpu"
+  policy_type        = "TargetTrackingScaling"
+  service_namespace  = aws_appautoscaling_target.api.service_namespace
+  resource_id        = aws_appautoscaling_target.api.resource_id
+  scalable_dimension = aws_appautoscaling_target.api.scalable_dimension
+
+  target_tracking_scaling_policy_configuration {
+    target_value = 55
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageCPUUtilization"
+    }
+  }
+}
