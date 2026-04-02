@@ -34,3 +34,14 @@ export function dueAtFrom(answeredAt: string, review: ReviewState): string {
   return new Date(Date.parse(answeredAt) + review.intervalDays * 86_400_000).toISOString();
 }
 
+export function dueForReview(mastery: SkillMastery[], now: Date, limit = 5): SkillMastery[] {
+  const nowMs = now.getTime();
+  return mastery
+    .filter((m) => m.dueAt !== null && Date.parse(m.dueAt) <= nowMs && m.band !== "new")
+    .sort((a, b) => {
+      // Most overdue first, then lowest confidence.
+      const overdue = Date.parse(a.dueAt!) - Date.parse(b.dueAt!);
+      return overdue !== 0 ? overdue : a.pKnown - b.pKnown;
+    })
+    .slice(0, limit);
+}
