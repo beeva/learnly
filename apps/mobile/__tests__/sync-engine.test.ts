@@ -1,0 +1,216 @@
+import { randomUUID } from "node:crypto";
+import { syncBackoffMs, type SyncOperation, type SyncOpResult, type SyncPushInput, type SyncResponse } from "@learnly/shared";
+import { SyncEngine, type SyncStore, type SyncTransport } from "../src/sync/engine";
+
+function lessonOp(createdAt = new Date().toISOString()): SyncOperation {
+  return {
+    opId: randomUUID(),
+    type: "lesson.complete",
+    createdAt,
+    payload: { lessonId: randomUUID(), durationMs: 120_000 },
+  };
+}
+
+function response(results: SyncOpResult[], cursor = "c1"): SyncResponse {
+  return {
+    results,
+    cursor,
+    serverTime: "2024-09-01T10:00:00.000Z",
+    mastery: { upserted: [], deletedIds: [] },
+    lessons: { upserted: [], deletedIds: [] },
+    progress: { totalXp: 120, streak: 3, freezesAvailable: 1 },
+  };
+}
+
+/** In-memory outbox mirroring the SQLite store's state machine. */
+class MemoryStore implements SyncStore {
+  rows: { op: SyncOperation; state: "pending" | "inflight" | "rejected"; error?: string }[] = [];
+  cursor: string | null = null;
+  applied: SyncResponse[] = [];
+
+  add(...ops: SyncOperation[]) {
+    for (const op of ops) this.rows.push({ op, state: "pending" });
+  }
+  async takeBatch(limit: number) {
+    const batch = this.rows.filter((r) => r.state === "pending").slice(0, limit);
+    batch.forEach((r) => (r.state = "inflight"));
+    return batch.map((r) => ({ op: r.op }));
+  }
+  async settle(sent: string[], results: SyncOpResult[]) {
+    for (const res of results) {
+      const row = this.rows.find((r) => r.op.opId === res.opId);
+      if (!row) continue;
+      if (res.status === "rejected") {
+        row.state = "rejected";
+        row.error = res.reason;
+      } else {
+        this.rows = this.rows.filter((r) => r !== row);
+      }
+    }
+    const mentioned = new Set(results.map((r) => r.opId));
+    for (const id of sent) {
+      const row = this.rows.find((r) => r.op.opId === id && r.state === "inflight");
+      if (row && !mentioned.has(id)) row.state = "pending";
+    }
+  }
+  async release(opIds: string[], error: string) {
+    for (const row of this.rows) {
+      if (opIds.includes(row.op.opId) && row.state === "inflight") {
+        row.state = "pending";
+        row.error = error;
+      }
+    }
+  }
+  async rejectLocally(results: SyncOpResult[]) {
+    await this.settle([], results);
+  }
+  async pendingCount() {
+    return this.rows.filter((r) => r.state !== "rejected").length;
+  }
+  async rejectedCount() {
+    return this.rows.filter((r) => r.state === "rejected").length;
+  }
+  async getCursor() {
+    return this.cursor;
+  }
+  async setCursor(cursor: string) {
+    this.cursor = cursor;
+  }
+  async applyResponse(res: SyncResponse) {
+    this.applied.push(res);
+  }
+}
+
+/** Transport that applies everything it receives, recording each push. */
+class AcceptingTransport implements SyncTransport {
+  pushes: SyncPushInput[] = [];
+  async push(input: SyncPushInput) {
+    this.pushes.push(input);
+    return response(
+      input.operations.map((op) => ({ opId: op.opId, status: "applied" as const })),
+      `cursor-${this.pushes.length}`,
+    );
+  }
+}
+
+function fakeTimers() {
+  let nextId = 1;
+  const timers = new Map<number, { fn: () => void; ms: number }>();
+  return {
+    timers,
+    setTimer: (fn: () => void, ms: number) => {
+      const id = nextId++;
+      timers.set(id, { fn, ms });
+      return id;
+    },
+    clearTimer: (handle: unknown) => {
+      timers.delete(handle as number);
+    },
+    runAll() {
+      const pending = [...timers.entries()];
+      timers.clear();
+      for (const [, t] of pending) t.fn();
+    },
+  };
+}
+
+function makeEngine(store: SyncStore, transport: SyncTransport, extra: Partial<ConstructorParameters<typeof SyncEngine>[0]> = {}) {
+  const timers = fakeTimers();
+  let online = true;
+  const engine = new SyncEngine({
+    store,
+    transport,
+    deviceId: async () => "test-device-0001",
+    isOnline: async () => online,
+    setTimer: timers.setTimer,
+    clearTimer: timers.clearTimer,
+    random: () => 0.5,
+    now: () => 1_700_000_000_000,
+    ...extra,
+  });
+  return { engine, timers, setOnline: (value: boolean) => (online = value) };
+}
+
+describe("SyncEngine — draining", () => {
+  it("pushes the outbox oldest-first in batches of at most 200", async () => {
+    const store = new MemoryStore();
+    const ops = Array.from({ length: 450 }, () => lessonOp());
+    store.add(...ops);
+    const transport = new AcceptingTransport();
+    const { engine } = makeEngine(store, transport);
+
+    const result = await engine.flush();
+
+    expect(result.ok).toBe(true);
+    expect(transport.pushes.map((p) => p.operations.length)).toEqual([200, 200, 50]);
+    expect(transport.pushes[0]?.operations[0]?.opId).toBe(ops[0]?.opId);
+    expect(store.rows).toHaveLength(0);
+    expect(engine.getState()).toMatchObject({ status: "idle", pending: 0, failures: 0 });
+    expect(engine.getState().lastSyncedAt).toBe(new Date(1_700_000_000_000).toISOString());
+  });
+
+  it("still pulls server deltas when there is nothing to push", async () => {
+    const store = new MemoryStore();
+    const transport = new AcceptingTransport();
+    const { engine } = makeEngine(store, transport);
+
+    await engine.flush();
+
+    expect(transport.pushes).toHaveLength(1);
+    expect(transport.pushes[0]?.operations).toEqual([]);
+    expect(store.applied).toHaveLength(1);
+  });
+
+  it("sends the stored cursor and saves the new one after applying deltas", async () => {
+    const store = new MemoryStore();
+    store.cursor = "previous";
+    store.add(lessonOp());
+    const transport = new AcceptingTransport();
+    const { engine } = makeEngine(store, transport);
+
+    await engine.flush();
+
+    expect(transport.pushes[0]?.since).toBe("previous");
+    expect(transport.pushes[0]?.deviceId).toBe("test-device-0001");
+    expect(store.cursor).toBe("cursor-1");
+    expect(store.applied[0]?.progress.streak).toBe(3);
+  });
+
+  it("parks rejected operations and keeps them out of the next batch", async () => {
+    const store = new MemoryStore();
+    const [good, bad] = [lessonOp(), lessonOp()];
+    store.add(good, bad);
+    const transport: SyncTransport = {
+      push: async (input) =>
+        response(
+          input.operations.map((op) =>
+            op.opId === bad.opId
+              ? { opId: op.opId, status: "rejected" as const, reason: "lesson_not_found" }
+              : { opId: op.opId, status: "duplicate" as const },
+          ),
+        ),
+    };
+    const { engine } = makeEngine(store, transport);
+
+    const result = await engine.flush();
+
+    expect(result).toMatchObject({ applied: 1, rejected: 1 });
+    expect(store.rows).toEqual([{ op: bad, state: "rejected", error: "lesson_not_found" }]);
+    expect(engine.getState().rejected).toBe(1);
+  });
+
+  it("returns ops the server didn't mention to the queue", async () => {
+    const store = new MemoryStore();
+    const [a, b] = [lessonOp(), lessonOp()];
+    store.add(a, b);
+    const transport: SyncTransport = {
+      push: async () => response([{ opId: a.opId, status: "applied" }]),
+    };
+    const { engine } = makeEngine(store, transport);
+
+    await engine.flush();
+
+    expect(store.rows.map((r) => [r.op.opId, r.state])).toEqual([[b.opId, "pending"]]);
+  });
+});
+
