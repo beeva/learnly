@@ -107,3 +107,11 @@ Infrastructure is defined in Terraform (`infra/terraform`): ECS Fargate for the 
 RDS Postgres, and S3 + CloudFront for the web app. GitHub Actions runs CI on every
 pull request and deploys `main` to staging. Releases are promoted to production by tag.
 See [docs/runbook.md](docs/runbook.md).
+
+## Further reading
+
+- [Architecture](docs/architecture.md)
+- [Adaptive engine v2](packages/adaptive-engine/docs/engine-v2.md)
+- [Accessibility](docs/accessibility.md)
+- [Performance](docs/performance.md)
+- [Architecture decision records](docs/adr)
