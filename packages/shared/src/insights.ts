@@ -34,3 +34,15 @@ export interface ClassroomInsights {
   students: StudentSnapshot[];
 }
 
+export interface MasteryHeatmapCell {
+  userId: UserId;
+  skillId: SkillId;
+  pKnown: number;
+  band: MasteryBand;
+}
+
+export interface MasteryHeatmap {
+  skills: { id: SkillId; name: string }[];
+  students: { id: UserId; displayName: string }[];
+  cells: MasteryHeatmapCell[];
+}
