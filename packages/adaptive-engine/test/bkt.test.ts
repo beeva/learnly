@@ -23,3 +23,9 @@ describe("paramsForItem", () => {
   });
 });
 
+describe("fitBkt", () => {
+  it("finds a high transit rate for quick learners", () => {
+    const sequences = Array.from({ length: 60 }, () => [false, true, true, true, true, true]);
+    expect(fitBkt(sequences, 5).pTransit).toBeGreaterThan(0.2);
+  });
+});
