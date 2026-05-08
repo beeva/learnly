@@ -20,3 +20,10 @@ describe("applyAttemptV2", () => {
     expect(next.mastery.pKnown).toBeGreaterThan(fresh().mastery.pKnown);
   });
 });
+describe("applyAttemptV2 with hints", () => {
+  it("gives less credit to hinted correct answers", () => {
+    const clean = applyAttemptV2(fresh(), evidence(true, 0));
+    const hinted = applyAttemptV2(fresh(), evidence(true, 2));
+    expect(hinted.mastery.pKnown).toBeLessThan(clean.mastery.pKnown);
+  });
+});
