@@ -214,3 +214,92 @@ describe("SyncEngine — draining", () => {
   });
 });
 
+describe("SyncEngine — failures and backoff", () => {
+  it("releases the batch and schedules a jittered retry when the push fails", async () => {
+    const store = new MemoryStore();
+    store.add(lessonOp(), lessonOp());
+    const transport: SyncTransport = {
+      push: jest.fn(async () => {
+        throw new Error("Network request failed");
+      }),
+    };
+    const { engine, timers } = makeEngine(store, transport);
+
+    const result = await engine.flush();
+
+    expect(result.ok).toBe(false);
+    expect(store.rows.every((r) => r.state === "pending" && r.error === "Network request failed")).toBe(true);
+    const state = engine.getState();
+    expect(state.status).toBe("backoff");
+    expect(state.failures).toBe(1);
+    const [timer] = [...timers.timers.values()];
+    expect(timer?.ms).toBe(syncBackoffMs(1, () => 0.5));
+    expect(state.nextRetryAt).toBe(1_700_000_000_000 + syncBackoffMs(1, () => 0.5));
+  });
+
+  it("grows the delay with consecutive failures and recovers on success", async () => {
+    const store = new MemoryStore();
+    store.add(lessonOp());
+    let fail = true;
+    const accepting = new AcceptingTransport();
+    const transport: SyncTransport = {
+      push: async (input) => {
+        if (fail) throw new Error("timeout");
+        return accepting.push(input);
+      },
+    };
+    const { engine, timers } = makeEngine(store, transport);
+
+    await engine.flush();
+    const first = [...timers.timers.values()][0]?.ms ?? 0;
+    timers.runAll();
+    await engine.flush();
+    const second = [...timers.timers.values()][0]?.ms ?? 0;
+    expect(second).toBeGreaterThan(first);
+    expect(engine.getState().failures).toBe(2);
+
+    fail = false;
+    timers.runAll();
+    await engine.flush();
+    expect(engine.getState()).toMatchObject({ status: "idle", failures: 0, nextRetryAt: null });
+    expect(store.rows).toHaveLength(0);
+  });
+
+  it("does nothing but report offline when there is no connection", async () => {
+    const store = new MemoryStore();
+    store.add(lessonOp());
+    const transport = new AcceptingTransport();
+    const { engine, setOnline } = makeEngine(store, transport);
+    setOnline(false);
+
+    const result = await engine.flush();
+
+    expect(result.ok).toBe(false);
+    expect(transport.pushes).toHaveLength(0);
+    expect(engine.getState()).toMatchObject({ status: "offline", pending: 1 });
+  });
+
+  it("forgets backoff and syncs immediately on reconnect", async () => {
+    const store = new MemoryStore();
+    store.add(lessonOp());
+    let fail = true;
+    const accepting = new AcceptingTransport();
+    const transport: SyncTransport = {
+      push: async (input) => {
+        if (fail) throw new Error("offline");
+        return accepting.push(input);
+      },
+    };
+    const { engine, timers } = makeEngine(store, transport);
+    await engine.flush();
+    expect(timers.timers.size).toBe(1);
+
+    fail = false;
+    engine.handleReconnect();
+    expect(timers.timers.size).toBe(0);
+    await engine.flush();
+    expect(engine.getState()).toMatchObject({ status: "idle", failures: 0 });
+    expect(accepting.pushes).toHaveLength(1);
+  });
+});
+
