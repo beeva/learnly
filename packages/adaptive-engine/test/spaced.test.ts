@@ -26,3 +26,27 @@ describe("qualityFromAttempt", () => {
   });
 });
 
+describe("dueForReview", () => {
+  const make = (id: string, dueAt: string | null, pKnown: number): SkillMastery => ({
+    skillId: id as SkillId,
+    pKnown,
+    ability: 0,
+    band: "practicing",
+    attempts: 6,
+    lastPracticedAt: "2025-06-01T00:00:00Z",
+    dueAt,
+  });
+
+  it("returns only due skills, most overdue first", () => {
+    const due = dueForReview(
+      [
+        make("later", "2025-07-01T00:00:00Z", 0.5),
+        make("old", "2025-06-02T00:00:00Z", 0.9),
+        make("recent", "2025-06-09T00:00:00Z", 0.6),
+        make("never", null, 0.2),
+      ],
+      new Date("2025-06-10T00:00:00Z"),
+    );
+    expect(due.map((m) => m.skillId)).toEqual(["old", "recent"]);
+  });
+});
