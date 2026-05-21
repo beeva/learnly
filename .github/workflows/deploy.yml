@@ -31,3 +31,35 @@ jobs:
           docker build -f apps/api/Dockerfile -t "$IMAGE" .
           docker push "$IMAGE"
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+      - name: Register task definition with the new image
+        run: |
+          aws ecs describe-task-definition --task-definition "learnly-$ENVIRONMENT-api" --query taskDefinition             | jq --arg IMAGE "$IMAGE" '.containerDefinitions[0].image = $IMAGE
+                | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)'             > taskdef.json
+          TASK_DEF=$(aws ecs register-task-definition --cli-input-json file://taskdef.json             --query taskDefinition.taskDefinitionArn --output text)
+          echo "TASK_DEF=$TASK_DEF" >> "$GITHUB_ENV"
+      - name: Run migrations
+        run: |
+          TASK=$(aws ecs run-task --cluster "learnly-$ENVIRONMENT" --task-definition "$TASK_DEF"             --launch-type FARGATE             --network-configuration "${{ secrets.ECS_NETWORK_CONFIG }}"             --overrides '{"containerOverrides":[{"name":"api","command":["node","dist/migrate.js"]}]}'             --query 'tasks[0].taskArn' --output text)
+          aws ecs wait tasks-stopped --cluster "learnly-$ENVIRONMENT" --tasks "$TASK"
+          EXIT=$(aws ecs describe-tasks --cluster "learnly-$ENVIRONMENT" --tasks "$TASK"             --query 'tasks[0].containers[0].exitCode' --output text)
+          [ "$EXIT" = "0" ] || { echo "Migrations failed (exit $EXIT)"; exit 1; }
+      - name: Roll out API
+        run: |
+          aws ecs update-service --cluster "learnly-$ENVIRONMENT" --service learnly-api --task-definition "$TASK_DEF"
+          aws ecs wait services-stable --cluster "learnly-$ENVIRONMENT" --services learnly-api
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build and upload web
+        run: |
+          pnpm --filter @learnly/web build
+          aws s3 sync apps/web/dist "s3://learnly-web-$ENVIRONMENT" --delete \
+            --cache-control "public,max-age=31536000,immutable" --exclude index.html --exclude sw.js
+          aws s3 cp apps/web/dist/index.html "s3://learnly-web-$ENVIRONMENT/index.html" --cache-control "no-cache"
+          aws s3 cp apps/web/dist/sw.js "s3://learnly-web-$ENVIRONMENT/sw.js" --cache-control "no-cache"
+          aws cloudfront create-invalidation --distribution-id "${{ secrets.CLOUDFRONT_ID }}" --paths "/index.html" "/sw.js"
+        env:
+          VITE_API_URL: ${{ vars.API_URL }}
