@@ -58,3 +58,8 @@ All notable changes to Learnly are listed here, oldest release first.
 
 - Product analytics pipeline (`/v1/events`) with batched clients
 - Prometheus metrics and readiness checks
+
+## 1.6.0 — 2026-07-24
+
+- Weekly goal summary on home
+- Polish across the web and mobile apps, and dependency upgrades
