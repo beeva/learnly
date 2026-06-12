@@ -102,3 +102,56 @@ export class NightlyScheduler {
   }
 }
 
+declare module "../container.js" {
+  interface Services {
+    jobRepository: JobRepository;
+    nightlyScheduler: NightlyScheduler;
+  }
+}
+
+/** Analytics events are aggregated into the warehouse long before this. */
+const ANALYTICS_RETENTION_DAYS = 400;
+
+export const jobsModule: FeatureModule = {
+  name: "jobs",
+  register(container) {
+    container
+      .register("jobRepository", (c) => new PgJobRepository(c.resolve("db")))
+      .register("nightlyScheduler", (c) => {
+        const repository = c.resolve("jobRepository");
+        const clock = c.resolve("clock");
+        const logger = c.resolve("logger").child({ component: "jobs" });
+        const daysAgo = (days: number) => new Date(clock.now().getTime() - days * 86_400_000).toISOString();
+        const jobs: NightlyJob[] = [
+          {
+            name: "bkt-fit",
+            run: async () => {
+              const summary = await runBktFit({ jobs: repository, bktParams: c.resolve("bktParamsRepository"), clock, logger });
+              c.resolve("bktParams").invalidate();
+              return summary;
+            },
+          },
+          {
+            name: "calibrate-difficulty",
+            run: () => runDifficultyCalibration({ jobs: repository, clock, logger }),
+          },
+          {
+            name: "retention",
+            run: async () => ({
+              // Twice the client retention window, so a late retry still dedupes.
+              syncOperationsPruned: await repository.pruneSyncOperations(daysAgo(SYNC_RETENTION_DAYS * 2)),
+              analyticsEventsPruned: await repository.pruneAnalyticsEvents(daysAgo(ANALYTICS_RETENTION_DAYS)),
+            }),
+          },
+        ];
+        return new NightlyScheduler({
+          jobs,
+          repository,
+          clock,
+          logger,
+          metrics: c.resolve("metrics"),
+          hourUtc: c.resolve("features").NIGHTLY_JOBS_HOUR_UTC,
+        });
+      });
+  },
+};
