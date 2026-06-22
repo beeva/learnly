@@ -108,3 +108,97 @@ describe("pickEncouragement", () => {
   });
 });
 
+const SKILL_A = asId<SkillId>("11111111-1111-4111-8111-111111111111");
+const SKILL_B = asId<SkillId>("22222222-2222-4222-8222-222222222222");
+
+function cachedItem(skillId: SkillId, difficulty: number, scorable: boolean): CachedItem {
+  const item: PublicItem = {
+    id: asId<ItemId>(randomUUID()),
+    skillId,
+    kind: "multiple_choice",
+    prompt: "Which fraction is equivalent to 1/2?",
+    difficulty,
+    hints: ["Multiply the top and bottom by the same number."],
+    choices: [
+      { id: "a", text: "2/4" },
+      { id: "b", text: "2/3" },
+    ],
+  };
+  return { item, key: scorable ? { kind: "multiple_choice", choiceId: "a" } : null, explanation: null };
+}
+
+function evidence(skillId: SkillId, correct: boolean | null, minute: number): AttemptMeta {
+  return {
+    kind: "attempt",
+    skillId,
+    difficulty: 0.5,
+    correct,
+    hintsUsed: 0,
+    answeredAt: new Date(Date.UTC(2024, 8, 1, 10, minute)).toISOString(),
+  };
+}
+
+describe("replayEvidence", () => {
+  it("layers unconfirmed local attempts on top of server mastery", () => {
+    const server: SkillMastery[] = [{ ...initialMastery(SKILL_A), attempts: 3, band: "learning" }];
+    const map = replayEvidence(server, [evidence(SKILL_A, true, 1), evidence(SKILL_A, true, 2)]);
+    const a = map.get(SKILL_A);
+    expect(a?.attempts).toBe(5);
+    expect(a?.ability).toBeGreaterThan(server[0]!.ability);
+    expect(a?.lastPracticedAt).toBe(new Date(Date.UTC(2024, 8, 1, 10, 2)).toISOString());
+  });
+
+  it("creates mastery for skills the server hasn't reported and skips unscored attempts", () => {
+    const map = replayEvidence([], [evidence(SKILL_B, false, 1), evidence(SKILL_B, null, 2)]);
+    expect(map.get(SKILL_B)?.attempts).toBe(1);
+    expect(map.get(SKILL_B)?.band).toBe("learning");
+  });
+
+  it("does not mutate the server rows", () => {
+    const row = initialMastery(SKILL_A);
+    replayEvidence([row], [evidence(SKILL_A, true, 1)]);
+    expect(row.attempts).toBe(0);
+  });
+});
+
+describe("chooseOfflineItem", () => {
+  const noHistory = { itemIds: [], skillIds: [], correct: [] };
+
+  it("prefers items that can be scored on the device", () => {
+    const pool = [cachedItem(SKILL_A, 0, false), cachedItem(SKILL_A, 0.2, true), cachedItem(SKILL_B, -0.4, false)];
+    const pick = chooseOfflineItem(pool, new Map(), noHistory, () => 0);
+    expect(pick?.scorable).toBe(true);
+    expect(pick?.item.id).toBe(pool[1]!.item.id);
+  });
+
+  it("falls back to unscored items when nothing has a key yet", () => {
+    const pool = [cachedItem(SKILL_A, 0, false)];
+    expect(chooseOfflineItem(pool, new Map(), noHistory)?.scorable).toBe(false);
+  });
+
+  it("never repeats an item from this session", () => {
+    const pool = [cachedItem(SKILL_A, 0, true), cachedItem(SKILL_A, 0.1, true)];
+    const first = chooseOfflineItem(pool, new Map(), noHistory)!;
+    const second = chooseOfflineItem(pool, new Map(), {
+      itemIds: [first.item.id],
+      skillIds: [first.item.skillId],
+      correct: [true],
+    });
+    expect(second?.item.id).not.toBe(first.item.id);
+    expect(
+      chooseOfflineItem(pool, new Map(), { itemIds: pool.map((p) => p.item.id), skillIds: [], correct: [] }),
+    ).toBeNull();
+  });
+
+  it("selects from 5,000 cached items in under 50ms", () => {
+    const pool = Array.from({ length: 5000 }, (_, i) =>
+      cachedItem(i % 2 ? SKILL_A : SKILL_B, ((i % 60) - 30) / 10, i % 3 !== 0),
+    );
+    const mastery = new Map<SkillId, SkillMastery>([[SKILL_A, { ...initialMastery(SKILL_A), ability: 0.8, attempts: 6 }]]);
+    const started = performance.now();
+    const pick = chooseOfflineItem(pool, mastery, noHistory);
+    const elapsed = performance.now() - started;
+    expect(pick).not.toBeNull();
+    expect(elapsed).toBeLessThan(50);
+  });
+});
