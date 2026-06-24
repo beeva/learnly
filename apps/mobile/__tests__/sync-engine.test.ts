@@ -303,3 +303,84 @@ describe("SyncEngine — failures and backoff", () => {
   });
 });
 
+describe("SyncEngine — safety", () => {
+  it("joins concurrent flushes into a single run", async () => {
+    const store = new MemoryStore();
+    store.add(lessonOp());
+    const transport = new AcceptingTransport();
+    const { engine } = makeEngine(store, transport);
+
+    const [a, b] = await Promise.all([engine.flush(), engine.flush()]);
+
+    expect(a).toBe(b);
+    expect(transport.pushes).toHaveLength(1);
+  });
+
+  it("rejects malformed operations locally instead of sending them", async () => {
+    const store = new MemoryStore();
+    const broken = { ...lessonOp(), payload: { lessonId: "not-a-uuid", durationMs: -5 } } as SyncOperation;
+    const fine = lessonOp();
+    store.add(broken, fine);
+    const transport = new AcceptingTransport();
+    const { engine } = makeEngine(store, transport);
+
+    const result = await engine.flush();
+
+    expect(transport.pushes[0]?.operations.map((o) => o.opId)).toEqual([fine.opId]);
+    expect(result.rejected).toBe(1);
+    expect(store.rows).toEqual([expect.objectContaining({ state: "rejected", error: "invalid_local_operation" })]);
+  });
+
+  it("stops retrying on fatal errors such as an expired session", async () => {
+    const store = new MemoryStore();
+    store.add(lessonOp());
+    class SessionEnded extends Error {}
+    const transport: SyncTransport = {
+      push: async () => {
+        throw new SessionEnded("Your session has ended");
+      },
+    };
+    const { engine, timers } = makeEngine(store, transport, { isFatal: (e) => e instanceof SessionEnded });
+
+    await engine.flush();
+
+    expect(engine.getState()).toMatchObject({ status: "error", lastError: "Your session has ended" });
+    expect(timers.timers.size).toBe(0);
+    expect(store.rows[0]?.state).toBe("pending");
+  });
+
+  it("runs before-flush hooks and result hooks around each push", async () => {
+    const store = new MemoryStore();
+    store.add(lessonOp());
+    const transport = new AcceptingTransport();
+    const { engine } = makeEngine(store, transport);
+    const calls: string[] = [];
+    engine.onBeforeFlush(() => {
+      calls.push("before");
+    });
+    const off = engine.onResults((results) => {
+      calls.push(`results:${results.length}`);
+    });
+
+    await engine.flush();
+    off();
+    await engine.flush();
+
+    expect(calls).toEqual(["before", "results:1", "before"]);
+  });
+
+  it("debounces bursts of sync requests into one flush", async () => {
+    const store = new MemoryStore();
+    const transport = new AcceptingTransport();
+    const { engine, timers } = makeEngine(store, transport);
+
+    engine.requestSync();
+    engine.requestSync();
+    engine.requestSync();
+
+    expect(timers.timers.size).toBe(1);
+    timers.runAll();
+    await engine.flush();
+    expect(transport.pushes).toHaveLength(1);
+  });
+});
