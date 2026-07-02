@@ -14,3 +14,14 @@ so accessibility is part of the core product.
 - Colour is never the only signal: mastery bands also use icons and labels.
 - Animations respect `prefers-reduced-motion` and the in-app *Reduce motion* setting.
 - Text scales up to 200% (web) and with Dynamic Type / font scale (mobile) without clipping.
+
+## How we test
+
+| Check | Where |
+|---|---|
+| axe-core on every route | Playwright (`apps/web/e2e/a11y.spec.ts`) in CI |
+| Contrast of design tokens | unit test over the token palette (≥ 4.5:1 for text) |
+| Screen reader walkthrough | VoiceOver (iOS/macOS) and TalkBack each release |
+| Keyboard-only walkthrough | diagnostic → lesson → practice → progress, each release |
+
+Found an issue? Email accessibility@learnly.app. We aim to respond within two school days.
