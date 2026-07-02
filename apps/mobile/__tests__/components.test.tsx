@@ -38,3 +38,29 @@ describe("Button", () => {
   });
 });
 
+describe("progress indicators", () => {
+  it("reports ring progress as a 0-100 value", () => {
+    renderThemed(<ProgressRing progress={0.42} accessibilityLabel="Daily goal" testID="ring" />);
+    const ring = screen.getByTestId("ring");
+    expect(ring.props.accessibilityRole).toBe("progressbar");
+    expect(ring.props.accessibilityLabel).toBe("Daily goal");
+    expect(ring.props.accessibilityValue).toEqual({ min: 0, max: 100, now: 42 });
+  });
+
+  it("clamps out-of-range and invalid values", () => {
+    renderThemed(
+      <>
+        <ProgressRing progress={1.8} accessibilityLabel="Over" testID="over" />
+        <ProgressBar progress={Number.NaN} accessibilityLabel="Broken" testID="nan" />
+      </>,
+    );
+    expect(screen.getByTestId("over").props.accessibilityValue.now).toBe(100);
+    expect(screen.getByTestId("nan").props.accessibilityValue.now).toBe(0);
+  });
+
+  it("stays out of the accessibility tree when it has no label", () => {
+    renderThemed(<ProgressBar progress={0.5} testID="bar" />);
+    expect(screen.getByTestId("bar").props.accessible).toBe(false);
+  });
+});
+
