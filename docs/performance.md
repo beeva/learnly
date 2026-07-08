@@ -13,3 +13,9 @@ Profiling in early 2026 showed a cold lesson open at 3.4s p75 on the web:
 | `GET /v1/lessons/:id` | 380 ms | 90 ms (ETag + covering index on items) |
 | Fonts | 2 render-blocking requests | preloaded subset with `font-display: swap` |
 | Next lesson | fetched on open | prefetched while finishing the current lesson |
+
+## Result
+
+p75 lesson load fell to **1.6s** on the web (field data, RUM) and **0.4s** for downloaded
+lessons on mobile. CI enforces the budget with Lighthouse CI on `/lesson/:id` using a
+throttled mobile profile, and the build fails if LCP exceeds 2s.
