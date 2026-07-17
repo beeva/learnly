@@ -64,3 +64,78 @@ describe("progress indicators", () => {
   });
 });
 
+const SKILL = asId<SkillId>("33333333-3333-4333-8333-333333333333");
+
+const choiceItem: PublicItem = {
+  id: asId<ItemId>("44444444-4444-4444-8444-444444444444"),
+  skillId: SKILL,
+  kind: "multiple_choice",
+  prompt: "Which fraction is bigger?",
+  difficulty: 0,
+  hints: [],
+  choices: [
+    { id: "a", text: "2/5" },
+    { id: "b", text: "3/5" },
+  ],
+};
+
+const orderingItem: PublicItem = {
+  id: asId<ItemId>("55555555-5555-4555-8555-555555555555"),
+  skillId: SKILL,
+  kind: "ordering",
+  prompt: "Put the water cycle in order",
+  difficulty: 0.3,
+  hints: [],
+  entries: [
+    { id: "evap", text: "Evaporation" },
+    { id: "cond", text: "Condensation" },
+    { id: "prec", text: "Precipitation" },
+  ],
+};
+
+function Controlled({ item, onValue }: { item: PublicItem; onValue: (r: Response | null) => void }) {
+  const [value, setValue] = useState<Response | null>(null);
+  return (
+    <ItemView
+      item={item}
+      value={value}
+      onChange={(next) => {
+        setValue(next);
+        onValue(next);
+      }}
+    />
+  );
+}
+
+describe("ItemView", () => {
+  it("selects a multiple choice answer and marks it checked", () => {
+    const onValue = jest.fn();
+    renderThemed(<Controlled item={choiceItem} onValue={onValue} />);
+    const choice = screen.getByRole("radio", { name: "B. 3/5" });
+    fireEvent.press(choice);
+    expect(onValue).toHaveBeenLastCalledWith({ kind: "multiple_choice", choiceId: "b" });
+    expect(screen.getByRole("radio", { name: "B. 3/5" }).props.accessibilityState).toMatchObject({ checked: true });
+  });
+
+  it("starts ordering items in their given order and moves one down via a screen reader action", () => {
+    const onValue = jest.fn();
+    renderThemed(<Controlled item={orderingItem} onValue={onValue} />);
+    expect(onValue).toHaveBeenCalledWith({ kind: "ordering", order: ["evap", "cond", "prec"] });
+
+    const first = screen.getByLabelText("Evaporation, position 1 of 3");
+    fireEvent(first, "accessibilityAction", { nativeEvent: { actionName: "moveDown" } });
+
+    expect(onValue).toHaveBeenLastCalledWith({ kind: "ordering", order: ["cond", "evap", "prec"] });
+    expect(screen.getByLabelText("Evaporation, position 2 of 3")).toBeTruthy();
+  });
+
+  it("offers only the moves that make sense at each end of the list", () => {
+    renderThemed(<Controlled item={orderingItem} onValue={jest.fn()} />);
+    const first = screen.getByLabelText("Evaporation, position 1 of 3");
+    const last = screen.getByLabelText("Precipitation, position 3 of 3");
+    const names = (node: typeof first) =>
+      (node.props.accessibilityActions as { name: string }[]).map((a) => a.name);
+    expect(names(first)).toEqual(["moveDown"]);
+    expect(names(last)).toEqual(["moveUp"]);
+  });
+});
