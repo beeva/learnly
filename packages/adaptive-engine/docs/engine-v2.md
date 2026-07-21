@@ -28,3 +28,26 @@ BKT parameters are fitted nightly per skill from the last 90 days of attempts
 (`fitBkt`, coarse grid search — sequences are short and grid search is far more
 stable than EM on sparse data). Skills with fewer than 200 sequences fall back
 to `DEFAULT_BKT`.
+
+## Simulation results
+
+`bench/simulate.ts` runs 5,000 simulated learners per engine. Each learner either knows
+the skill or doesn't, has a 15% chance of learning it on each practice item, slips 10% of
+the time when they know it, and guesses (25% on multiple choice, 5% on free response) when
+they don't:
+
+| Engine | Items to mastery (mean) | Reached mastery within 40 items | Premature mastery |
+|---|---|---|---|
+| v1 | 24.6 | 58.7% | 0.0% |
+| v2 | 8.1 | 99.9% | 3.5% |
+
+v1 was safe but far too slow. It almost never called mastery early, but four in ten
+learners who had clearly learned the skill were still being drilled on it after 40 items.
+v2 recognises learning about 3× sooner while keeping premature verdicts rare. The review
+schedule catches the few early verdicts that turn out to be wrong, because a missed review
+item brings the skill straight back.
+
+## Rollout
+
+v2 shipped behind the `ENGINE_VERSION` flag, at 10% → 50% → 100% over three
+weeks, with existing mastery migrated by seeding BKT `pKnown` from the v1 value.
