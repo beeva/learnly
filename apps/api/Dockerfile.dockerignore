@@ -1,0 +1,13 @@
+# Used by BuildKit for apps/api/Dockerfile (the build context is the repo root).
+.git
+**/node_modules
+**/dist
+**/coverage
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log
+apps/web
+apps/mobile
+infra
+docs
