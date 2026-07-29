@@ -1,0 +1,19 @@
+{
+  "ci": {
+    "collect": {
+      "staticDistDir": "./dist",
+      "isSinglePageApplication": true,
+      "url": ["http://localhost/", "http://localhost/courses"],
+      "numberOfRuns": 3,
+      "settings": { "preset": "perf", "formFactor": "mobile", "throttlingMethod": "simulate" }
+    },
+    "assert": {
+      "assertions": {
+        "largest-contentful-paint": ["error", { "maxNumericValue": 2000 }],
+        "cumulative-layout-shift": ["error", { "maxNumericValue": 0.1 }],
+        "categories:accessibility": ["error", { "minScore": 0.95 }]
+      }
+    },
+    "upload": { "target": "filesystem", "outputDir": "./lighthouse-report" }
+  }
+}
