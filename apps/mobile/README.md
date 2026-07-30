@@ -53,3 +53,45 @@ Assets are authored as SVG (`assets/*.svg`); export the PNGs referenced by
 `app.config.ts` with `npx @expo/image-utils` or any SVG rasteriser before a
 store build (1024² icon, 1284×2778 splash, 96² monochrome notification icon).
 
+## Offline-first, by design
+
+Learners lose connectivity all the time — in basements, on buses, on school
+wifi that blocks half the internet. Nothing in Learnly should care.
+
+```
+ answer ──► submitAnswer ──online──► POST /v1/attempts ──► AttemptResult
+                │                              (answer key + mastery cached)
+                └─offline / network error──► local scoring (cached key)
+                                              applyAttempt() optimistic mastery
+                                              outbox ◄── SyncOperation
+ NetInfo / foreground / new write ──► SyncEngine.flush()
+       batches of ≤200 ──► POST /v1/sync ──► SyncResponse
+       results: applied|duplicate → delete · rejected → dead letter
+       deltas: mastery, lessons, progress → SQLite
+```
+
+- **Every write is an operation.** Attempts, lesson completions and preference
+  changes become `SyncOperation`s validated with the shared `syncOperationSchema`
+  and stored in the SQLite outbox with a client `opId`, so retries are idempotent.
+- **One flush at a time**, oldest first, at most 200 ops per request, looping
+  until drained. An empty outbox still pulls deltas.
+- **Backoff** uses the shared `syncBackoffMs` (exponential, full jitter, 5 min cap);
+  reconnecting resets it immediately.
+- **Conflict safety.** The server is the source of truth for mastery. Optimistic
+  changes are never written over server rows — they are *replayed* on read from
+  unconfirmed outbox attempts, so a delta landing mid-session can't erase them
+  and can't double count them either.
+- **Crash safety.** In-flight ops return to pending on launch; the server dedupes.
+- **Offline practice** picks items with the engine's `selectNextItem` over cached
+  items, preferring ones whose answer key is known locally so feedback stays
+  instant. Unknown keys are saved and scored on sync ("we'll check this one").
+- **Dead letters.** Rejected ops, ops older than `SYNC_RETENTION_DAYS`
+  (`isExpiredOperation`) and ops that exhaust their retry budget move to a
+  dead-letter state. They're shown under *Settings → Sync & offline data* with
+  retry and remove — the learner's work is never dropped silently.
+
+Downloaded lessons open straight from SQLite (and their images from the
+expo-image disk cache), which keeps lesson load well under the 2-second budget
+even on slow devices. After each sync the next recommended lessons are warmed
+in the background.
+
