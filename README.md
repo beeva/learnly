@@ -85,14 +85,22 @@ Teachers create a classroom, share a six-character join code, and get:
 - a "needs attention" list for students whose activity or accuracy has dropped
 - CSV export for gradebooks
 
-## Results
+## Engine benchmarks
 
-| | |
-|---|---|
-| **3×** | course completion compared with the fixed path |
-| **4.9★** | student rating in in-app surveys |
-| **3** | platforms: web, iOS and Android |
-| **< 2s** | lesson load on any device |
+Measured with the simulated-learner benchmark in
+[`packages/adaptive-engine/bench/simulate.ts`](packages/adaptive-engine/bench/simulate.ts)
+(5,000 learners per engine; method in
+[engine-v2.md](packages/adaptive-engine/docs/engine-v2.md)):
+
+| | v1 (Rasch) | v2 (knowledge tracing + review) |
+|---|---|---|
+| Items to mastery (mean) | 24.6 | 8.1 |
+| Reached mastery within 40 items | 58.7% | 99.9% |
+| Premature mastery verdicts | 0.0% | 3.5% |
+
+These figures come from simulated learners, not classroom data. Reproduce them with
+`pnpm --filter @learnly/adaptive-engine exec tsx bench/simulate.ts`.
+
 
 ## Quality
 
@@ -115,3 +123,7 @@ See [docs/runbook.md](docs/runbook.md).
 - [Accessibility](docs/accessibility.md)
 - [Performance](docs/performance.md)
 - [Architecture decision records](docs/adr)
+
+## License
+
+[MIT](LICENSE)
