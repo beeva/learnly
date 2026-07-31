@@ -95,3 +95,48 @@ expo-image disk cache), which keeps lesson load well under the 2-second budget
 even on slow devices. After each sync the next recommended lessons are warmed
 in the background.
 
+## Accessibility
+
+Targets WCAG 2.2 AA, verified with VoiceOver and TalkBack:
+
+- every control has a role, label and state; headings are marked as headers;
+  live regions announce feedback, toasts and sync changes;
+- text scales with the OS up to 200% (`a11y.maxFontSizeMultiplier`), touch
+  targets are ≥ 48pt, and `contrast.test.ts` holds every text token pair to 4.5:1
+  in light and dark;
+- ordering questions work without dragging: move up / down buttons and
+  screen-reader actions on each row;
+- reduce motion (OS setting or in-app) swaps slides, springs and shimmer for
+  simple fades.
+
+## Languages
+
+English, Español and Filipino. Copy lives next to each screen as English
+defaults (`useCopy("home", { greeting: "…" })`); `src/i18n/es.ts` and `fil.ts`
+provide translations by namespace, and anything missing falls back to English.
+`i18n.test.ts` checks both catalogs have the same keys and placeholders.
+
+## Streak reminders
+
+Opt-in from Settings. One reminder a day at the learner's chosen time, skipped
+on days they've already practiced and never inside quiet hours (default
+21:00–07:30). Scheduling is pure and unit tested (`quietHours.ts`).
+
+## Testing
+
+```bash
+pnpm --filter @learnly/mobile test
+```
+
+Covers the sync engine (batching, backoff, single flight, fatal errors), outbox
+compaction, dead-letter planning, local scoring and offline item selection
+(including a 5,000-item performance check), quiet hours, analytics batching,
+i18n parity, contrast, and core components.
+
+## Builds
+
+EAS profiles (`eas.json`): `development` (dev client, simulator), `preview`
+(internal distribution, staging API) and `production` (store, auto-incremented
+build numbers). `APP_VARIANT` gives each its own name and bundle id so they
+install side by side. Store listing metadata lives in `store.config.json`
+(`eas metadata:push`).
