@@ -47,7 +47,7 @@ jobs:
         run: |
           aws ecs update-service --cluster "learnly-$ENVIRONMENT" --service learnly-api --task-definition "$TASK_DEF"
           aws ecs wait services-stable --cluster "learnly-$ENVIRONMENT" --services learnly-api
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
